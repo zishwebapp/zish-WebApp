@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
 import {
   ClipboardList,
   Clock,
@@ -16,6 +17,8 @@ import {
   Package2,
   DollarSign,
   User,
+  Download,
+  Calendar as CalendarIcon,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -45,6 +48,9 @@ export function RequiredInventory({ userType }: RequiredInventoryProps) {
   const [statusFilter, setStatusFilter] = useState("all")
   const [userFilter, setUserFilter] = useState("all")
   const { toast } = useToast()
+  const [dateFilter, setDateFilter] = useState<"all" | "thisMonth" | "lastMonth" | "custom">("all")
+  const [customStartDate, setCustomStartDate] = useState("")
+  const [customEndDate, setCustomEndDate] = useState("")
 
   // Load data from API (fallback to localStorage)
   useEffect(() => {
@@ -99,11 +105,36 @@ export function RequiredInventory({ userType }: RequiredInventoryProps) {
       filtered = filtered.filter(order => order.orderedBy === userFilter)
     }
 
+    // Date filter
+    let start: Date | null = null
+    let end: Date | null = null
+    const now = new Date()
+
+    if (dateFilter === "thisMonth") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1)
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    } else if (dateFilter === "lastMonth") {
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+    } else if (dateFilter === "custom" && customStartDate && customEndDate) {
+      start = new Date(customStartDate)
+      start.setHours(0, 0, 0, 0)
+      end = new Date(customEndDate)
+      end.setHours(23, 59, 59, 999)
+    }
+
+    if (start && end) {
+      filtered = filtered.filter(order => {
+        const d = new Date(order.orderDate)
+        return d >= start! && d <= end!
+      })
+    }
+
     // Sort by creation date (newest first)
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     setFilteredOrders(filtered)
-  }, [inventoryOrders, searchTerm, statusFilter, userFilter])
+  }, [inventoryOrders, searchTerm, statusFilter, userFilter, dateFilter, customStartDate, customEndDate])
 
   // Update order status
   const updateOrderStatus = async (orderId: string, newStatus: "pending" | "purchased") => {
@@ -130,6 +161,64 @@ export function RequiredInventory({ userType }: RequiredInventoryProps) {
       title: "Status Updated",
       description: `Order for ${order?.itemName} marked as ${newStatus}.`,
     })
+  }
+
+  // Export currently filtered orders to CSV
+  const exportToCSV = () => {
+    if (!filteredOrders.length) return
+    const headers = [
+      "Item",
+      "Unit",
+      "Quantity",
+      "Rate",
+      "Total Amount",
+      "Ordered By",
+      "Order Date",
+      "Status",
+    ]
+    const rows = filteredOrders.map(o => [
+      o.itemName,
+      o.unit,
+      String(o.quantity),
+      String(o.rate),
+      o.totalAmount.toFixed(2),
+      o.orderedBy,
+      new Date(o.orderDate).toLocaleDateString(),
+      o.status,
+    ])
+    const csv = [headers, ...rows]
+      .map(r =>
+        r
+          .map(field => {
+            const s = String(field ?? "")
+            return s.includes(",") || s.includes('"') || s.includes("\n")
+              ? `"${s.replace(/"/g, '""')}"`
+              : s
+          })
+          .join(","),
+      )
+      .join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    const d = new Date()
+    link.download = `inventory-orders-${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const getPeriodLabel = () => {
+    switch (dateFilter) {
+      case "thisMonth":
+        return "This Month"
+      case "lastMonth":
+        return "Last Month"
+      case "custom":
+        return customStartDate && customEndDate ? `${customStartDate} to ${customEndDate}` : "Custom Range"
+      default:
+        return "All Dates"
+    }
   }
 
   // Only allow Super Admin access
@@ -219,7 +308,61 @@ export function RequiredInventory({ userType }: RequiredInventoryProps) {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Date Filtering Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Date Filtering Controls
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+              <Label>Period</Label>
+              <Select value={dateFilter} onValueChange={(value: any) => setDateFilter(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Dates</SelectItem>
+                  <SelectItem value="thisMonth">This Month</SelectItem>
+                  <SelectItem value="lastMonth">Last Month</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {dateFilter === "custom" && (
+              <>
+                <div>
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center">
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                Showing: {getPeriodLabel()}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -264,11 +407,15 @@ export function RequiredInventory({ userType }: RequiredInventoryProps) {
 
       {/* Orders List */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
             Inventory Orders ({filteredOrders.length})
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </CardHeader>
         <CardContent>
           {filteredOrders.length === 0 ? (
