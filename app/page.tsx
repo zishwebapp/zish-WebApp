@@ -548,8 +548,33 @@ const fallbackMenuItems: MenuItem[] = [
   },
 ]
 
+// Helper function to check if item is non-veg
+function isNonVegItem(itemName: string): boolean {
+  const nonVegItems = [
+    'chicken nuggets',
+    'chicken tikki burger', 
+    'peri peri chicken sandwich',
+    'chicken grill sandwich',
+    'chicken pizza (small)',
+    'chicken pizza (medium)',
+    'chicken pizza (large)',
+    'chicken wings',
+    'chicken pop corn',
+    'chicken strips',
+    'chicken cheese balls (3)',
+    'chicken cheese balls (6)',
+    'chicken cheese pizza (small)',
+    'chicken cheese pizza (medium)',
+    'chicken cheese pizza (large)',
+    'zish signature platter'
+  ]
+  return nonVegItems.some(nonVegItem => 
+    itemName.toLowerCase().includes(nonVegItem.toLowerCase())
+  )
+}
+
 export default function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState("All")
+  const [selectedCategory, setSelectedCategory] = useState("Bewerages")
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [showOrderPlacedPopup, setShowOrderPlacedPopup] = useState(false)
   const [orderPlacedInfo, setOrderPlacedInfo] = useState<{id: string; totalAmount: number} | null>(null)
@@ -777,21 +802,32 @@ export default function HomePage() {
   }, [])
 
   // Get unique categories from menu items
-  const categories = ["All", ...Array.from(new Set(menuItems.map(item => item.category)))]
+  const categories = [
+    "Bewerages",
+    "Quick Bites", 
+    "Ice Cream & Scoops",
+    "Fresh Juice",
+    "Moctails",
+    "Milk Shakes",
+    "Milk Shake With Ice Creams"
+  ]
 
   const filteredItems = menuItems.filter((item) => {
-    //console.log(item)
-    // Category filter
-    const categoryMatch = selectedCategory === "All" || item.category === selectedCategory
-
-    // Search filter
+    // Global search filter - searches across all items regardless of category
+    const searchTerm = menuSearchTerm.trim().toLowerCase()
     const searchMatch =
-      !menuSearchTerm.trim() ||
-      item.name.toLowerCase().includes(menuSearchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(menuSearchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(menuSearchTerm.toLowerCase())
+      !searchTerm ||
+      (item.name && item.name.toLowerCase().includes(searchTerm)) ||
+      (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+      (item.category && item.category.toLowerCase().includes(searchTerm))
 
-    return categoryMatch && searchMatch
+    // If there's a search term, show all matching items regardless of category
+    if (menuSearchTerm.trim()) {
+      return searchMatch
+    }
+
+    // If no search term, filter by selected category
+    return item.category === selectedCategory
   })
 
   const addToCart = (item: any, quantity = 1, specialInstructions = "") => {
@@ -1408,6 +1444,14 @@ export default function HomePage() {
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+                        
+                        {/* Non-veg indicator */}
+                        {isNonVegItem(item.name) && (
+                          <div className="absolute top-4 left-4 w-6 h-6 bg-white rounded-sm border border-red-500 flex items-center justify-center shadow-md">
+                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          </div>
+                        )}
+                        
                         <Badge className="absolute top-4 right-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg border-0">
                           {item.category}
                         </Badge>
@@ -1481,7 +1525,7 @@ export default function HomePage() {
                     <h3 className="text-lg font-semibold text-gray-600 mb-2">No Items Found</h3>
                     <p className="text-gray-500 mb-4">
                       {menuSearchTerm
-                        ? `No items match "${menuSearchTerm}" in ${selectedCategory === "All" ? "any category" : selectedCategory}`
+                        ? `No items match "${menuSearchTerm}" across all categories`
                         : `No items available in ${selectedCategory}`}
                     </p>
                     {menuSearchTerm && (

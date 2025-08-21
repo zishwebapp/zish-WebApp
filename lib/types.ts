@@ -241,16 +241,13 @@ export interface OrdersInsights {
 
 // Category mapping
 export const CATEGORY_MAP: Record<number, string> = {
-  1: "Tea",
-  2: "Coffee", 
-  3: "Cold Coffee",
-  4: "Milk Shake",
-  5: "Fresh Juice",
-  6: "Ice Cream",
-  7: "Pastry",
-  8: "Food",
-  9: "Snacks",
-  10: "Fries"
+  1: "Bewerages",
+  2: "Quick Bites", 
+  3: "Ice Cream & Scoops",
+  4: "Fresh Juice",
+  5: "Moctails",
+  6: "Milk Shakes",
+  7: "Milk Shake With Ice Creams"
 }
 
 // Order status display mapping

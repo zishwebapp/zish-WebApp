@@ -28,6 +28,31 @@ interface MobileMenuSearchProps {
   checkingLocation: boolean // Add checking location state
 }
 
+// Add the helper function at the top of the file
+function isNonVegItem(itemName: string): boolean {
+  const nonVegItems = [
+    'chicken nuggets',
+    'chicken tikki burger', 
+    'peri peri chicken sandwich',
+    'chicken grill sandwich',
+    'chicken pizza (small)',
+    'chicken pizza (medium)',
+    'chicken pizza (large)',
+    'chicken wings',
+    'chicken pop corn',
+    'chicken strips',
+    'chicken cheese balls (3)',
+    'chicken cheese balls (6)',
+    'chicken cheese pizza (small)',
+    'chicken cheese pizza (medium)',
+    'chicken cheese pizza (large)',
+    'zish signature platter'
+  ]
+  return nonVegItems.some(nonVegItem => 
+    itemName.toLowerCase().includes(nonVegItem.toLowerCase())
+  )
+}
+
 export function MobileMenuSearch({
   menuItems,
   categories,
@@ -43,14 +68,21 @@ export function MobileMenuSearch({
   // Remove local cart state - const [cart, setCart] = useState<{ [key: number]: number }>({})
 
   const filteredItems = menuItems.filter((item) => {
-    const categoryMatch = selectedCategory === "All" || item.category === selectedCategory
+    // Global search filter - searches across all items regardless of category
+    const searchTermLower = searchTerm.trim().toLowerCase()
     const searchMatch =
-      !searchTerm.trim() ||
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase())
+      !searchTermLower ||
+      (item.name && item.name.toLowerCase().includes(searchTermLower)) ||
+      (item.description && item.description.toLowerCase().includes(searchTermLower)) ||
+      (item.category && item.category.toLowerCase().includes(searchTermLower))
 
-    return categoryMatch && searchMatch
+    // If there's a search term, show all matching items regardless of category
+    if (searchTerm.trim()) {
+      return searchMatch
+    }
+
+    // If no search term, filter by selected category
+    return item.category === selectedCategory
   })
 
   const handleAddToCart = (item: MenuItem) => {
@@ -126,7 +158,15 @@ export function MobileMenuSearch({
                 <div className="flex-1 p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h3 className="font-semibold text-gray-800 text-sm leading-tight">{item.name}</h3>
+                      <div className="flex items-center gap-2">
+                        {/* Non-veg indicator */}
+                        {isNonVegItem(item.name) && (
+                          <div className="w-4 h-4 bg-white rounded-sm border border-red-500 flex items-center justify-center flex-shrink-0">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          </div>
+                        )}
+                        <h3 className="font-semibold text-gray-800 text-sm leading-tight">{item.name}</h3>
+                      </div>
                       <Badge
                         variant="secondary"
                         className="text-xs mt-1 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border-0"
@@ -203,7 +243,7 @@ export function MobileMenuSearch({
               <h3 className="text-lg font-semibold text-gray-600 mb-2">No Items Found</h3>
               <p className="text-gray-500 text-sm mb-4">
                 {searchTerm
-                  ? `No items match "${searchTerm}" in ${selectedCategory === "All" ? "any category" : selectedCategory}`
+                  ? `No items match "${searchTerm}" across all categories`
                   : `No items available in ${selectedCategory}`}
               </p>
               {searchTerm && (
