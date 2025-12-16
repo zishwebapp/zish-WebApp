@@ -1,13 +1,13 @@
 import type { ApiResponse, BackendMenuItem, MenuItem } from './types.ts'
 import { CATEGORY_MAP } from './types.ts'
 
-// API Configuration - Updated to use port 8000
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
+// API Configuration - Updated to use port 3000 for Google Sheets backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
 
-// Test API connection great
+// Test API connection
 export async function testApiConnection(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/menu/test`, {
+    const response = await fetch(`${API_BASE_URL}/menu`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -47,15 +47,14 @@ function getImageFileName(itemName: string): string {
 // API Functions
 export async function fetchMenuItems(): Promise<MenuItem[]> {
   try {
-  //  console.log('Attempting to fetch menu items from:', `${API_BASE_URL}/menu/items`);
+    console.log('Fetching menu items from Google Sheets backend:', `${API_BASE_URL}/menu`);
     
-    const response = await fetch(`${API_BASE_URL}/menu/items`, {
+    const response = await fetch(`${API_BASE_URL}/menu`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -68,14 +67,25 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
       throw new Error(errorData.message || `HTTP error! status: ${response.status} - ${response.statusText}`);
     }
 
-    const apiResponse: ApiResponse<BackendMenuItem[]> = await response.json();
-  //  console.log('Menu API response:', apiResponse);
+    // Backend returns: { success: true, sheet_used: "...", count: N, menu: [...] }
+    const apiResponse: any = await response.json();
+    console.log('Menu API response:', {
+      success: apiResponse.success,
+      sheet_used: apiResponse.sheet_used,
+      count: apiResponse.count,
+      items: apiResponse.menu?.length || 0
+    });
     
     if (!apiResponse.success) {
       throw new Error(apiResponse.message || 'Failed to fetch menu items');
     }
 
-    return apiResponse.data.map(transformMenuItem);
+    // Transform the menu items from the 'menu' field
+    if (!apiResponse.menu || !Array.isArray(apiResponse.menu)) {
+      throw new Error('Invalid menu data received from backend');
+    }
+
+    return apiResponse.menu.map(transformMenuItem);
   } catch (error) {
     console.error('Error fetching menu items:', error);
     throw error;
@@ -84,24 +94,9 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
 
 export async function fetchAvailableMenuItems(): Promise<MenuItem[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/menu/items/available`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const apiResponse: ApiResponse<BackendMenuItem[]> = await response.json()
-    
-    if (!apiResponse.success) {
-      throw new Error(apiResponse.message || 'Failed to fetch available menu items')
-    }
-
-    return apiResponse.data.map(transformMenuItem)
+    // Fetch all items and filter for available ones on the client side
+    const allItems = await fetchMenuItems();
+    return allItems.filter(item => item.isAvailable !== false);
   } catch (error) {
     console.error('Error fetching available menu items:', error)
     throw error
@@ -110,24 +105,13 @@ export async function fetchAvailableMenuItems(): Promise<MenuItem[]> {
 
 export async function fetchMenuItemsByCategory(categoryId: number): Promise<MenuItem[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/menu/items/category/${categoryId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    // Fetch all items and filter by category on the client side
+    const allItems = await fetchMenuItems();
+    const categoryName = CATEGORY_MAP[categoryId];
+    if (!categoryName) {
+      throw new Error(`Invalid category ID: ${categoryId}`);
     }
-
-    const apiResponse: ApiResponse<BackendMenuItem[]> = await response.json()
-    
-    if (!apiResponse.success) {
-      throw new Error(apiResponse.message || 'Failed to fetch menu items by category')
-    }
-
-    return apiResponse.data.map(transformMenuItem)
+    return allItems.filter(item => item.category === categoryName);
   } catch (error) {
     console.error('Error fetching menu items by category:', error)
     throw error
