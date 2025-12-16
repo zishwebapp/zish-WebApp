@@ -89,29 +89,33 @@ export interface FeedbackStats {
 }
 
 // ORDER TYPES - NEW
-// Backend Order Item (from API)
+// Backend Order Item (from API) - Updated for Google Sheets Backend
 export interface BackendOrderItem {
-  id: number
-  item_name: string
-  item_price: number
+  id?: string // Optional for Google Sheets
+  itemName?: string // Alternative field name
+  item_name?: string // Support both naming conventions
+  itemPrice?: number // Alternative field name
+  item_price?: number // Support both naming conventions
   quantity: number
-  special_instructions: string | null
+  price?: number // Alternative field name
+  specialInstructions?: string // Alternative field name
+  special_instructions?: string | null // Support both naming conventions
   subtotal: number
 }
 
-// Backend Order (from API)
+// Backend Order (from API) - Updated for Google Sheets Backend
 export interface BackendOrder {
-  id: number
+  id: string // Changed to string for Google Sheets order IDs (ORD-xxxxx)
   customer_name: string
   customer_phone: string
   customer_email: string | null
   total_amount: number
-  order_status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
-  payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
+  order_status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' // Updated statuses
+  payment_status: 'unpaid' | 'paid' // Simplified payment statuses
   payment_method: 'cash' | 'card' | 'upi' | 'online' | null
   special_instructions: string | null
   delivery_address: string | null
-  order_date: string
+  order_date?: string
   estimated_delivery_time: string | null
   actual_delivery_time: string | null
   cancelled_at: string | null
@@ -119,22 +123,23 @@ export interface BackendOrder {
   cancelled_by: string | null
   items: BackendOrderItem[]
   created_at: string
-  updated_at: string
+  updated_at?: string
+  itemCount?: number // Optional field from API
 }
 
-// Frontend Order (for UI)
+// Frontend Order (for UI) - Updated for Google Sheets Backend
 export interface Order {
-  id: number
+  id: string // Changed to string for Google Sheets order IDs
   customerName: string
   customerPhone: string
   customerEmail?: string
   totalAmount: number
-  orderStatus: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
+  orderStatus: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' // Updated statuses
+  paymentStatus: 'unpaid' | 'paid' // Simplified payment statuses
   paymentMethod?: 'cash' | 'card' | 'upi' | 'online'
   specialInstructions?: string
   deliveryAddress?: string
-  orderDate: string
+  orderDate?: string
   estimatedDeliveryTime?: string
   actualDeliveryTime?: string
   cancelledAt?: string
@@ -142,12 +147,12 @@ export interface Order {
   cancelledBy?: string
   items: OrderItem[]
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
-// Frontend Order Item
+// Frontend Order Item - Updated for Google Sheets Backend
 export interface OrderItem {
-  id: number
+  id?: string // Optional for Google Sheets
   itemName: string
   itemPrice: number
   quantity: number
@@ -170,16 +175,16 @@ export interface OrderSubmission {
   deliveryAddress?: string
 }
 
-// Order status update
+// Order status update - Updated for Google Sheets Backend
 export interface OrderStatusUpdate {
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
+  status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' // Updated statuses
   changedBy?: string
   notes?: string
 }
 
-// Payment status update
+// Payment status update - Updated for Google Sheets Backend
 export interface PaymentStatusUpdate {
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
+  paymentStatus: 'unpaid' | 'paid' // Simplified payment statuses
   paymentMethod?: 'cash' | 'card' | 'upi' | 'online'
   notes?: string
 }
@@ -250,20 +255,17 @@ export const CATEGORY_MAP: Record<number, string> = {
   7: "Milk Shake With Ice Creams"
 }
 
-// Order status display mapping
+// Order status display mapping - Updated for Google Sheets Backend
 export const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: "Order Placed",
-  confirmed: "Confirmed",
+  pending: "Pending",
   preparing: "Preparing",
-  ready: "Ready for Pickup",
-  delivered: "Delivered",
+  ready: "Ready",
+  completed: "Completed",
   cancelled: "Cancelled"
 }
 
-// Payment status display mapping
+// Payment status display mapping - Updated for Google Sheets Backend
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending: "Payment Pending",
-  paid: "Paid",
-  failed: "Payment Failed",
-  refunded: "Refunded"
+  unpaid: "Unpaid",
+  paid: "Paid"
 } 

@@ -13,38 +13,39 @@ import type {
   OrdersInsights,
 } from './types'
 
-// API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+// API Configuration - Updated for Google Sheets Backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
 
 // Helper function to transform backend order to frontend format
+// Updated to handle Google Sheets API response format
 function transformOrder(backendOrder: BackendOrder): Order {
   return {
-    id: backendOrder.id,
+    id: String(backendOrder.id), // Ensure string type
     customerName: backendOrder.customer_name,
-    customerPhone: backendOrder.customer_phone,
+    customerPhone: backendOrder.customer_phone || '',
     customerEmail: backendOrder.customer_email || undefined,
-    totalAmount: backendOrder.total_amount,
+    totalAmount: Number(backendOrder.total_amount) || 0,
     orderStatus: backendOrder.order_status,
     paymentStatus: backendOrder.payment_status,
     paymentMethod: backendOrder.payment_method || undefined,
     specialInstructions: backendOrder.special_instructions || undefined,
     deliveryAddress: backendOrder.delivery_address || undefined,
-    orderDate: backendOrder.order_date,
+    orderDate: backendOrder.order_date || backendOrder.created_at,
     estimatedDeliveryTime: backendOrder.estimated_delivery_time || undefined,
     actualDeliveryTime: backendOrder.actual_delivery_time || undefined,
     cancelledAt: backendOrder.cancelled_at || undefined,
     cancelledReason: backendOrder.cancelled_reason || undefined,
     cancelledBy: backendOrder.cancelled_by || undefined,
-    items: backendOrder.items.map(item => ({
+    items: (backendOrder.items || []).map(item => ({
       id: item.id,
-      itemName: item.item_name,
-      itemPrice: item.item_price,
-      quantity: item.quantity,
-      specialInstructions: item.special_instructions || undefined,
-      subtotal: item.subtotal
+      itemName: item.itemName || item.item_name || '',
+      itemPrice: Number(item.itemPrice || item.item_price || item.price) || 0,
+      quantity: Number(item.quantity) || 0,
+      specialInstructions: item.specialInstructions || item.special_instructions || undefined,
+      subtotal: Number(item.subtotal) || 0
     })),
     createdAt: backendOrder.created_at,
-    updatedAt: backendOrder.updated_at
+    updatedAt: backendOrder.updated_at || backendOrder.created_at
   }
 }
 
@@ -104,14 +105,33 @@ export async function placeOrder(orderData: OrderSubmission): Promise<Order> {
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
     }
 
-    const apiResponse: ApiResponse<BackendOrder> = await response.json()
+    const apiResponse: ApiResponse<any> = await response.json()
     console.log('Order API success response:', apiResponse);
 
     if (!apiResponse.success) {
       throw new Error(apiResponse.message || 'Failed to place order')
     }
 
-    const transformedOrder = transformOrder(apiResponse.data);
+    // Google Sheets API returns order data in 'data' field
+    // Transform it to match frontend Order structure
+    const orderData_response = apiResponse.data;
+    const transformedOrder: Order = {
+      id: String(orderData_response.id),
+      customerName: orderData_response.customerName,
+      customerPhone: orderData_response.customerPhone || '',
+      totalAmount: Number(orderData_response.totalAmount) || 0,
+      orderStatus: orderData_response.status || 'pending',
+      paymentStatus: 'unpaid',
+      items: (orderData_response.items || []).map((item: any) => ({
+        itemName: item.itemName || '',
+        itemPrice: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 0,
+        subtotal: Number(item.subtotal) || 0
+      })),
+      createdAt: orderData_response.createdAt || new Date().toISOString(),
+      updatedAt: orderData_response.createdAt || new Date().toISOString()
+    };
+    
     console.log('Transformed order:', transformedOrder);
     
     return transformedOrder;
@@ -143,45 +163,58 @@ export async function fetchAllOrders(params?: {
   currentPage: number
 }> {
   try {
-    const queryParams = new URLSearchParams()
-    if (params?.page) queryParams.append('page', params.page.toString())
-    if (params?.limit) queryParams.append('limit', params.limit.toString())
-    if (params?.status) queryParams.append('status', params.status)
-    if (params?.paymentStatus) queryParams.append('paymentStatus', params.paymentStatus)
-    if (params?.phone) queryParams.append('phone', params.phone)
-    if (params?.customerName) queryParams.append('customerName', params.customerName)
-    if (params?.paymentMethod) queryParams.append('paymentMethod', params.paymentMethod)
-    if (params?.sortBy) queryParams.append('sortBy', params.sortBy)
-    if (params?.order) queryParams.append('order', params.order)
-    if (params?.includeCancelled !== undefined) queryParams.append('includeCancelled', params.includeCancelled.toString())
-    if (params?.orderId !== undefined) queryParams.append('orderId', String(params.orderId))
-    if (params?.orderNumber !== undefined) queryParams.append('orderNumber', String(params.orderNumber))
-    if (params?.item) queryParams.append('item', params.item)
-
-    const url = `${API_BASE_URL}/orders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+    // Google Sheets backend doesn't support pagination yet, 
+    // so we'll fetch all and handle pagination on frontend
+    const url = `${API_BASE_URL}/orders`
 
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-cache', // Disable caching to always get fresh data from Google Sheets
     })
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const apiResponse: OrdersListResponse = await response.json()
+    const apiResponse: ApiResponse<BackendOrder[]> = await response.json()
 
     if (!apiResponse.success) {
       throw new Error(apiResponse.message || 'Failed to fetch orders')
     }
 
+    let orders = apiResponse.data.map(transformOrder)
+
+    // Apply client-side filtering
+    if (params?.status) {
+      orders = orders.filter(o => o.orderStatus === params.status)
+    }
+    if (params?.paymentStatus) {
+      orders = orders.filter(o => o.paymentStatus === params.paymentStatus)
+    }
+    if (params?.phone) {
+      orders = orders.filter(o => o.customerPhone?.includes(params.phone || ''))
+    }
+    if (params?.customerName) {
+      orders = orders.filter(o => 
+        o.customerName?.toLowerCase().includes(params.customerName?.toLowerCase() || '')
+      )
+    }
+
+    // Client-side pagination
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const start = (page - 1) * limit
+    const end = start + limit
+    const paginatedOrders = orders.slice(start, end)
+
     return {
-      orders: apiResponse.data.map(transformOrder),
-      totalCount: apiResponse.totalCount,
-      totalPages: apiResponse.totalPages,
-      currentPage: apiResponse.currentPage
+      orders: paginatedOrders,
+      totalCount: orders.length,
+      totalPages: Math.ceil(orders.length / limit),
+      currentPage: page
     }
   } catch (error) {
     console.error('Error fetching orders:', error)
@@ -192,10 +225,7 @@ export async function fetchAllOrders(params?: {
 // Get orders by phone (customer)
 export async function fetchOrdersByPhone(phone: string, includeCancelled: boolean = false): Promise<Order[]> {
   try {
-    const queryParams = new URLSearchParams()
-    if (includeCancelled) queryParams.append('includeCancelled', 'true')
-
-    const url = `${API_BASE_URL}/orders/customer/${phone}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+    const url = `${API_BASE_URL}/orders/customer/${phone}`
 
     const response = await fetch(url, {
       method: 'GET',
@@ -283,28 +313,73 @@ export async function updatePaymentStatus(orderId: string, paymentUpdate: Paymen
   }
 }
 
+// Cancel order by updating status to 'cancelled'
 export async function cancelOrder(orderId: string, cancellation: OrderCancellation): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/cancel`, {
-      method: 'POST',
+    await updateOrderStatus(orderId, {
+      status: 'cancelled',
+      changedBy: cancellation.cancelledBy || 'admin',
+      notes: cancellation.reason
+    });
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    throw error;
+  }
+}
+
+// Delete order completely (removes from all sheets)
+export async function deleteOrder(orderId: string): Promise<void> {
+  try {
+    console.log('Deleting order:', orderId);
+    
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(cancellation),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to cancel order');
+      throw new Error(errorData.message || 'Failed to delete order');
     }
 
     const apiResponse = await response.json();
 
     if (!apiResponse.success) {
-      throw new Error(apiResponse.message || 'Failed to cancel order');
+      throw new Error(apiResponse.message || 'Failed to delete order');
     }
+
+    console.log('Order deleted successfully:', apiResponse.data);
   } catch (error) {
-    console.error('Error cancelling order:', error);
+    console.error('Error deleting order:', error);
+    throw error;
+  }
+}
+
+// Check data integrity
+export async function checkDataIntegrity(): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/integrity-check`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const apiResponse = await response.json();
+
+    if (!apiResponse.success) {
+      throw new Error(apiResponse.message || 'Failed to check data integrity');
+    }
+
+    return apiResponse.data;
+  } catch (error) {
+    console.error('Error checking data integrity:', error);
     throw error;
   }
 } 

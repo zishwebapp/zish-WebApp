@@ -26,10 +26,11 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
-import { fetchAllOrders, updateOrderStatus, updatePaymentStatus, cancelOrder } from "@/lib/order-api"
+import { fetchAllOrders, updateOrderStatus, updatePaymentStatus, cancelOrder, deleteOrder, checkDataIntegrity } from "@/lib/order-api"
 import type { Order, OrderStatusUpdate, PaymentStatusUpdate, OrderCancellation } from "@/lib/types"
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/types"
 import { OrderPDFService } from '@/lib/pdf-service'
@@ -56,17 +57,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
   const [updatingOrders, setUpdatingOrders] = useState<Set<number>>(new Set())
   const { toast } = useToast()
 
-  // Helper function to map backend status to frontend display status
-  const mapBackendToFrontendStatus = (backendStatus: string): string => {
-    if (backendStatus === 'delivered') return 'completed'
-    return backendStatus
-  }
-
-  // Helper function to map frontend display status to backend status
-  const mapFrontendToBackendStatus = (frontendStatus: string): string => {
-    if (frontendStatus === 'completed') return 'delivered'
-    return frontendStatus
-  }
+  // No longer needed - Google Sheets backend uses 'completed' status directly
 
   // Guard concurrent requests to avoid 429s
   let loadingInFlight = false
@@ -149,14 +140,11 @@ export function OrderManagement({ userType }: OrderManagementProps) {
       setUpdatingOrders(prev => new Set(prev).add(orderId))
       
       // Update local state immediately for better UX
-      const statusForLocal = mapFrontendToBackendStatus(newStatus) as Order['orderStatus']
-      setOrders(prevOrders => prevOrders.map(order => order.id === Number(orderId) ? { ...order, orderStatus: statusForLocal } : order))
+      setOrders(prevOrders => prevOrders.map(order => order.id === String(orderId) ? { ...order, orderStatus: newStatus as Order['orderStatus'] } : order))
 
-      // Map frontend status to backend status
-      const backendStatus = mapFrontendToBackendStatus(newStatus)
-      
+      // Update order status on backend
       await updateOrderStatus(String(orderId), { 
-        status: backendStatus as 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled',
+        status: newStatus as Order['orderStatus'],
         changedBy: 'admin'
       })
       
@@ -187,19 +175,19 @@ export function OrderManagement({ userType }: OrderManagementProps) {
 
   const handlePaymentUpdate = async (
     orderId: number,
-    newStatus: 'pending' | 'paid_cash' | 'paid_upi'
+    newStatus: 'unpaid' | 'paid_cash' | 'paid_upi'
   ) => {
     try {
       setUpdatingOrders(prev => new Set(prev).add(orderId))
 
       // Map UI statuses to backend shape
-      const backendStatus: 'pending' | 'paid' = 
-        newStatus === 'paid_cash' || newStatus === 'paid_upi' ? 'paid' : 'pending'
+      const backendStatus: 'unpaid' | 'paid' = 
+        newStatus === 'paid_cash' || newStatus === 'paid_upi' ? 'paid' : 'unpaid'
       const backendMethod: 'cash' | 'upi' | undefined =
         newStatus === 'paid_cash' ? 'cash' : newStatus === 'paid_upi' ? 'upi' : undefined
 
       // Optimistic update (use backend shape so selection sticks on reload)
-      setOrders(prev => prev.map(o => o.id === Number(orderId) ? { ...o, paymentStatus: backendStatus, paymentMethod: backendMethod } : o))
+      setOrders(prev => prev.map(o => o.id === String(orderId) ? { ...o, paymentStatus: backendStatus, paymentMethod: backendMethod } : o))
 
       await updatePaymentStatus(String(orderId), {
         paymentStatus: backendStatus,
@@ -260,6 +248,41 @@ export function OrderManagement({ userType }: OrderManagementProps) {
     }
   }
 
+  const handleDeleteOrder = async (orderId: string) => {
+    // Confirm deletion
+    if (!confirm(`⚠️ PERMANENT DELETION\n\nAre you sure you want to permanently delete order ${orderId}?\n\nThis will remove:\n• The order\n• All order items\n• All status history\n\n❌ This action CANNOT be undone.`)) {
+      return;
+    }
+
+    try {
+      setUpdatingOrders(prev => new Set(prev).add(Number(orderId)))
+      
+      await deleteOrder(orderId)
+      
+      toast({
+        title: "Order Deleted",
+        description: "Order and all related records have been permanently deleted.",
+      })
+      
+      // Reload orders to reflect deletion
+      await loadOrders(currentPage)
+      
+    } catch (err) {
+      console.error('Failed to delete order:', err)
+      toast({
+        title: "Delete Failed",
+        description: err instanceof Error ? err.message : "Failed to delete order. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdatingOrders(prev => {
+        const s = new Set(prev)
+        s.delete(Number(orderId))
+        return s
+      })
+    }
+  }
+
   // Helper functions for styling
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -271,7 +294,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
         return 'bg-orange-100 text-orange-800 hover:bg-orange-200'
       case 'ready':
         return 'bg-purple-100 text-purple-800 hover:bg-purple-200'
-      case 'delivered':
+      case 'completed':
         return 'bg-green-100 text-green-800 hover:bg-green-200'
       case 'cancelled':
         return 'bg-red-100 text-red-800 hover:bg-red-200'
@@ -398,10 +421,9 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="preparing">Preparing</SelectItem>
                   <SelectItem value="ready">Ready</SelectItem>
-                  <SelectItem value="delivered">Completed</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
@@ -414,10 +436,8 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Payments</SelectItem>
-                  <SelectItem value="pending">Unpaid</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -471,9 +491,8 @@ export function OrderManagement({ userType }: OrderManagementProps) {
             <>
               {/* Orders list */}
               {orders.map((order) => {
-                // Map backend status to frontend for comparison
-                const displayStatus = mapBackendToFrontendStatus(order.orderStatus)
-                const isUpdating = updatingOrders.has(order.id)
+                const displayStatus = order.orderStatus
+                const isUpdating = updatingOrders.has(Number(order.id))
                 
                 return (
                   <Card key={order.id} className="border border-gray-200">
@@ -557,7 +576,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                     variant={isSelected ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => handleStatusUpdate(order.id, status)}
-                                    disabled={isUpdating || order.orderStatus === 'cancelled' || order.orderStatus === 'delivered'}
+                                    disabled={isUpdating || order.orderStatus === 'cancelled' || order.orderStatus === 'completed'}
                                     className={`relative ${
                                       isSelected 
                                         ? status === 'cancelled'
@@ -593,12 +612,12 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                   <>
                                     {/* Unpaid */}
                                     <Button
-                                      variant={order.paymentStatus === 'pending' ? 'default' : 'outline'}
+                                      variant={order.paymentStatus === 'unpaid' ? 'default' : 'outline'}
                                       size="sm"
-                                      onClick={() => handlePaymentUpdate(order.id, 'pending')}
+                                      onClick={() => handlePaymentUpdate(order.id, 'unpaid')}
                                       disabled={isUpdating || isPaid}
                                       className={`relative ${
-                                        order.paymentStatus === 'pending'
+                                        order.paymentStatus === 'unpaid'
                                           ? 'bg-orange-500 text-white border-orange-500 disabled:opacity-100'
                                           : 'border-gray-300 text-gray-400 cursor-not-allowed'
                                       }`}
@@ -649,17 +668,45 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                           </div>
                         </div>
 
-                        {/* PDF Download Button */}
-                        <div className="mt-4 flex justify-end">
-                          <Button
-                            onClick={() => OrderPDFService.download(order)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center gap-2 bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
-                          >
-                            <Download className="h-4 w-4" />
-                            Download PDF
-                          </Button>
+                        {/* Action Buttons */}
+                        <div className="mt-4 flex justify-between items-center">
+                          {/* Warning for orphaned orders */}
+                          {(order as any).isOrphaned && (
+                            <div className="flex items-center gap-2 text-yellow-600 text-sm">
+                              <AlertCircle className="h-4 w-4" />
+                              <span>No items found for this order</span>
+                            </div>
+                          )}
+                          
+                          <div className={`flex gap-2 ${(order as any).isOrphaned ? 'ml-auto' : 'ml-auto'}`}>
+                            <Button
+                              onClick={() => OrderPDFService.download(order)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2 bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                            >
+                              <Download className="h-4 w-4" />
+                              Download PDF
+                            </Button>
+                            
+                            {/* Delete Button - Superadmin Only */}
+                            {userType === "superadmin" && (
+                              <Button
+                                onClick={() => handleDeleteOrder(String(order.id))}
+                                variant="outline"
+                                size="sm"
+                                disabled={isUpdating}
+                                className="flex items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                              >
+                                {isUpdating ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                                Delete
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
