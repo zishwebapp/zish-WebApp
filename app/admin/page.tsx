@@ -34,6 +34,7 @@ import {
   ShoppingCart,
   ClipboardList,
   BarChart3,
+  CreditCard,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
@@ -105,12 +106,17 @@ export default function AdminPage() {
   // Orders Today from API (superadmin dashboard)
   const [ordersTodayApi, setOrdersTodayApi] = useState<number | null>(null)
   const [dailyRevenueApi, setDailyRevenueApi] = useState<number | null>(null)
+  const [dailyRevenueCashApi, setDailyRevenueCashApi] = useState<number | null>(null)
+  const [dailyRevenueUpiApi, setDailyRevenueUpiApi] = useState<number | null>(null)
   const [monthlyRevenueApi, setMonthlyRevenueApi] = useState<number | null>(null)
+  const [monthlyRevenueCashApi, setMonthlyRevenueCashApi] = useState<number | null>(null)
+  const [monthlyRevenueUpiApi, setMonthlyRevenueUpiApi] = useState<number | null>(null)
   const [pendingOrdersApi, setPendingOrdersApi] = useState<number | null>(null)
   const [unpaidOrdersApi, setUnpaidOrdersApi] = useState<number | null>(null)
   const [unpaidAmountApi, setUnpaidAmountApi] = useState<number | null>(null)
   const [completedOrdersApi, setCompletedOrdersApi] = useState<number | null>(null)
   const [fastMovingTopQtyApi, setFastMovingTopQtyApi] = useState<number | null>(null)
+  const [fastMovingTopNameApi, setFastMovingTopNameApi] = useState<string | null>(null)
   const [showAddSpecial, setShowAddSpecial] = useState(false)
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -880,7 +886,11 @@ export default function AdminPage() {
         // Paid-only revenue
         const revenue = await fetchRevenueStats();
         setDailyRevenueApi(revenue.daily_revenue ?? 0);
+        setDailyRevenueCashApi(revenue.daily_revenue_cash ?? 0);
+        setDailyRevenueUpiApi(revenue.daily_revenue_upi ?? 0);
         setMonthlyRevenueApi(revenue.monthly_revenue ?? 0);
+        setMonthlyRevenueCashApi(revenue.monthly_revenue_cash ?? 0);
+        setMonthlyRevenueUpiApi(revenue.monthly_revenue_upi ?? 0);
         // Dashboard metrics
         const dashboard = await fetchDashboardStats();
         setPendingOrdersApi(dashboard.pending_orders ?? null);
@@ -890,7 +900,11 @@ export default function AdminPage() {
         const topQty = Array.isArray(dashboard.fast_moving_items) && dashboard.fast_moving_items.length > 0
           ? dashboard.fast_moving_items[0].total_quantity
           : 0;
+        const topName = Array.isArray(dashboard.fast_moving_items) && dashboard.fast_moving_items.length > 0
+          ? dashboard.fast_moving_items[0].item_name
+          : null;
         setFastMovingTopQtyApi(topQty);
+        setFastMovingTopNameApi(topName);
       } catch (e) {
         console.error("Failed to refresh order stats:", e);
       }
@@ -1538,7 +1552,7 @@ export default function AdminPage() {
             {/* Existing dashboard content - Stats Cards, Orders, etc. */}
             {/* Stats Cards - Only for Super Admin */}
             {userType === "superadmin" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -1571,6 +1585,30 @@ export default function AdminPage() {
                         <p className="text-2xl font-bold text-gray-900">₹{totalMonthlyRevenue.toFixed(2)}</p>
                       </div>
                       <DollarSign className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Daily Revenue (UPI)</p>
+                        <p className="text-2xl font-bold text-gray-900">₹{(dailyRevenueUpiApi ?? 0).toFixed(2)}</p>
+                      </div>
+                      <CreditCard className="h-6 w-6 text-purple-600 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue (UPI)</p>
+                        <p className="text-2xl font-bold text-gray-900">₹{(monthlyRevenueUpiApi ?? 0).toFixed(2)}</p>
+                      </div>
+                      <CreditCard className="h-6 w-6 text-indigo-600 flex-shrink-0" />
                     </div>
                   </CardContent>
                 </Card>
@@ -1616,6 +1654,7 @@ export default function AdminPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-xs font-medium text-gray-600 mb-1">Fast Moving Items</p>
+                        <p className="text-sm font-semibold text-purple-600 truncate">{fastMovingTopNameApi || fastMovingProduct[0]}</p>
                         <p className="text-2xl font-bold text-purple-600">{fastMovingProduct[1]}</p>
                         <p className="text-xs text-gray-500 mt-1">Total Sold</p>
                       </div>

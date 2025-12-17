@@ -217,7 +217,11 @@ export interface OrderStats {
 // Revenue-only stats (for /stats/revenue)
 export interface RevenueStats {
   daily_revenue: number;
+  daily_revenue_cash: number;
+  daily_revenue_upi: number;
   monthly_revenue: number;
+  monthly_revenue_cash: number;
+  monthly_revenue_upi: number;
 }
 
 // Dashboard stats (for /stats/dashboard)
