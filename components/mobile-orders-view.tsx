@@ -302,7 +302,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                                         <p className="text-xs text-gray-500 mt-1">Note: {item.specialInstructions}</p>
                                       )}
                                     </div>
-                                    <span className="font-semibold text-amber-600">${formatCurrency(item.subtotal)}</span>
+                                    <span className="font-semibold text-amber-600">₹{formatCurrency(item.subtotal)}</span>
                                   </div>
                                 ))
                               ) : (
@@ -310,7 +310,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                                   <span className="font-medium text-gray-800">
                                     Order details not available
                                   </span>
-                                  <span className="font-semibold text-amber-600">${formatCurrency(order.totalAmount)}</span>
+                                  <span className="font-semibold text-amber-600">₹{formatCurrency(order.totalAmount)}</span>
                                 </div>
                               )}
                             </div>
@@ -387,7 +387,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                           {/* Order Total */}
                           <div className="flex justify-between items-center text-lg font-bold">
                             <span className="text-gray-800">Total Amount:</span>
-                            <span className="text-amber-600">${formatCurrency(order.totalAmount)}</span>
+                            <span className="text-amber-600">₹{formatCurrency(order.totalAmount)}</span>
                           </div>
 
                           {/* PDF Download Button - ADD THIS SECTION */}
