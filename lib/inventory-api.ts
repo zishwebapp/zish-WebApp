@@ -2,144 +2,99 @@ import type { ApiResponse } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
 
-export interface InventoryItemDto {
-  id: number
-  name: string
-  unit_label: string
-  rate: number
-  category: string
-  status: 'active' | 'inactive'
-}
+export type InventoryEntryStatus = 'pending' | 'purchased'
 
-export async function fetchInventoryItems(status: 'active' | 'inactive' | 'all' = 'active'): Promise<InventoryItemDto[]> {
-  const res = await fetch(`${API_BASE_URL}/inventory/items?status=${status}`, { method: 'GET' })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data: ApiResponse<InventoryItemDto[]> = await res.json()
-  if (!data.success) throw new Error(data.message || 'Failed to load items')
-  return data.data
-}
-
-export async function createInventoryItem(payload: {
-  name: string
-  unit_label: string
-  rate: number
-  category: string
-  status?: 'active' | 'inactive'
-  created_by?: string
-}): Promise<InventoryItemDto> {
-  const res = await fetch(`${API_BASE_URL}/inventory/items`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data: ApiResponse<InventoryItemDto> = await res.json()
-  if (!data.success) throw new Error(data.message || 'Failed to create item')
-  return data.data
-}
-
-export async function updateInventoryItem(id: number, payload: Partial<Omit<InventoryItemDto, 'id'>>): Promise<InventoryItemDto> {
-  const res = await fetch(`${API_BASE_URL}/inventory/items/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data: ApiResponse<InventoryItemDto> = await res.json()
-  if (!data.success) throw new Error(data.message || 'Failed to update item')
-  return data.data
-}
-
-export async function deleteInventoryItem(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/inventory/items/${id}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-}
-
-export async function placeInventoryOrder(payload: {
-  ordered_by: string
-  notes?: string
-  items: { inventory_item_id: number; quantity: number }[]
-}): Promise<{ order_id: number }> {
-  const res = await fetch(`${API_BASE_URL}/inventory/orders`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data: ApiResponse<{ order_id: number }> = await res.json()
-  if (!data.success) throw new Error(data.message || 'Failed to place order')
-  return data.data
-}
-
-export interface InventoryOrderLineDto {
-  itemName: string
-  unit: string
-  rate: number
+export interface InventoryEntryDto {
+  id: string
+  item_name: string
   quantity: number
-  lineAmount: number
+  total_cost: number
+  entry_date: string
+  status: InventoryEntryStatus
+  purchased_at: string | null
+  created_by: string
 }
 
-export interface InventoryOrderDto {
-  id: number
-  status: 'pending' | 'purchased' | 'cancelled'
-  total_amount: number
-  ordered_by: string
-  ordered_at: string
-  purchased_at?: string
-  items: InventoryOrderLineDto[]
+export type DateRangeFilter = 'week' | 'month' | 'custom'
+
+export interface DateRangeParams {
+  range: DateRangeFilter
+  start?: string // required when range === 'custom' (YYYY-MM-DD)
+  end?: string
 }
 
-export async function listInventoryOrders(params?: { status?: 'pending' | 'purchased' | 'all'; user?: string }): Promise<InventoryOrderDto[]> {
+function rangeQuery(params?: Partial<DateRangeParams> & { status?: string; search?: string }): string {
   const qs = new URLSearchParams()
+  if (params?.range) qs.set('range', params.range)
+  if (params?.start) qs.set('start', params.start)
+  if (params?.end) qs.set('end', params.end)
   if (params?.status) qs.set('status', params.status)
-  if (params?.user) qs.set('user', params.user)
-  const res = await fetch(`${API_BASE_URL}/inventory/orders${qs.toString() ? `?${qs.toString()}` : ''}`)
+  if (params?.search) qs.set('search', params.search)
+  const s = qs.toString()
+  return s ? `?${s}` : ''
+}
+
+export async function fetchInventoryEntries(
+  params?: Partial<DateRangeParams> & { status?: InventoryEntryStatus | 'all'; search?: string }
+): Promise<InventoryEntryDto[]> {
+  const res = await fetch(`${API_BASE_URL}/inventory/entries${rangeQuery(params)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data: ApiResponse<InventoryOrderDto[]> = await res.json()
-  if (!data.success) throw new Error(data.message || 'Failed to load orders')
+  const data: ApiResponse<InventoryEntryDto[]> = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to load inventory entries')
   return data.data
 }
 
-export async function markInventoryOrderPurchased(id: number, purchased_by: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/inventory/orders/${id}/purchased`, {
-    method: 'PUT',
+export async function createInventoryEntry(payload: {
+  item_name: string
+  quantity: number
+  total_cost: number
+  entry_date?: string
+  status?: InventoryEntryStatus
+  created_by?: string
+}): Promise<InventoryEntryDto> {
+  const res = await fetch(`${API_BASE_URL}/inventory/entries`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ purchased_by }),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-}
-
-
-export interface InventoryExpensesInsightsDto {
-  total_items_purchased: number
-  total_quantity_purchased: number
-  total_amount_spent: number
-  unique_items: number
-  average_order_value: number
-  purchase_count: number
-  most_purchased_item: { name: string; quantity: number; amount: number } | null
-  top_spender: { name: string; amount: number; orders: number } | null
-}
-
-export async function fetchInventoryExpensesInsights(params?: { start?: string; end?: string }): Promise<InventoryExpensesInsightsDto> {
-  const qs = new URLSearchParams()
-  if (params?.start) qs.set('start', params.start)
-  if (params?.end) qs.set('end', params.end)
-  const res = await fetch(`${API_BASE_URL}/inventory/insights${qs.toString() ? `?${qs.toString()}` : ''}`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data: ApiResponse<InventoryExpensesInsightsDto> = await res.json()
-  if (!data.success) throw new Error(data.message || 'Failed to load inventory insights')
+  const data: ApiResponse<InventoryEntryDto> = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to add inventory entry')
   return data.data
 }
 
-export async function downloadInventoryExpensesCsv(params?: { start?: string; end?: string }): Promise<void> {
-  const qs = new URLSearchParams()
-  if (params?.start) qs.set('start', params.start)
-  if (params?.end) qs.set('end', params.end)
-  const url = `${API_BASE_URL}/inventory/insights/export${qs.toString() ? `?${qs.toString()}` : ''}`
-  const a = document.createElement('a')
-  a.href = url
-  a.download = ''
-  a.click()
+export async function updateInventoryEntry(
+  id: string,
+  payload: Partial<Pick<InventoryEntryDto, 'item_name' | 'quantity' | 'total_cost' | 'entry_date' | 'status'>>
+): Promise<InventoryEntryDto> {
+  const res = await fetch(`${API_BASE_URL}/inventory/entries/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data: ApiResponse<InventoryEntryDto> = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to update inventory entry')
+  return data.data
 }
 
+export async function markInventoryEntryPurchased(id: string): Promise<InventoryEntryDto> {
+  const res = await fetch(`${API_BASE_URL}/inventory/entries/${id}/purchase`, { method: 'PATCH' })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data: ApiResponse<InventoryEntryDto> = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to mark entry as purchased')
+  return data.data
+}
+
+export async function deleteInventoryEntry(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/inventory/entries/${id}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
+export async function duplicateInventoryEntry(id: string): Promise<InventoryEntryDto> {
+  const res = await fetch(`${API_BASE_URL}/inventory/entries/${id}/duplicate`, { method: 'POST' })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data: ApiResponse<InventoryEntryDto> = await res.json()
+  if (!data.success) throw new Error(data.message || 'Failed to duplicate inventory entry')
+  return data.data
+}

@@ -250,13 +250,21 @@ export interface OrdersInsights {
 
 // Category mapping
 export const CATEGORY_MAP: Record<number, string> = {
-  1: "Bewerages",
-  2: "Quick Bites", 
-  3: "Ice Cream & Scoops",
-  4: "Fresh Juice",
-  5: "Moctails",
-  6: "Milk Shakes",
-  7: "Milk Shake With Ice Creams"
+  1: "Momo's",
+  2: "Fries / Snacks",
+  3: "Burger",
+  4: "Sandwich's",
+  5: "Ice Cream Sundae",
+  6: "Maggie",
+  7: "ZISH's Signature",
+  8: "ZISH Platter",
+  9: "Classic Lassi",
+  10: "Coffee",
+  11: "Falooda",
+  12: "Seasonal Juice",
+  13: "Original Shakes",
+  14: "Nutella",
+  15: "Soda & Mojito"
 }
 
 // Order status display mapping - Updated for Google Sheets Backend

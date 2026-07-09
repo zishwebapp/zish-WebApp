@@ -31,20 +31,20 @@ import {
   MessageSquare,
   ChevronsUpDown,
   Package2,
-  ShoppingCart,
-  ClipboardList,
-  BarChart3,
+  Receipt,
   CreditCard,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { fetchMenuItems } from "@/lib/api"
-import { InventoryItems } from "@/components/inventory-items"
-import { OrderInventory } from "@/components/order-inventory"
-import { RequiredInventory } from "@/components/required-inventory"
-import { InventoryInsights } from "@/components/inventory-insights"
 import { FeedbackManagement } from "@/components/feedback-management"
 import { OrderManagement } from "@/components/order-management"
+import { InventorySalesDashboard } from "@/components/inventory-sales-dashboard"
+import { InventoryEntriesTab } from "@/components/inventory-entries-tab"
+import { SalesTab } from "@/components/sales-tab"
+import { DateRangeFilterBar } from "@/components/date-range-filter"
+import { useDateRange } from "@/hooks/use-date-range"
+import { WrongPasswordModal } from "@/components/wrong-password-modal"
 import { fetchOrderStats, fetchRevenueStats, fetchDashboardStats, downloadDashboardExport } from "@/lib/order-api"
 import { login } from "@/lib/auth-api"
 
@@ -95,6 +95,7 @@ export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState("") // Add this line
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [showWrongPasswordModal, setShowWrongPasswordModal] = useState(false)
   const [orders, setOrders] = useState<Order[]>([])
   const [todaysSpecials, setTodaysSpecials] = useState<Special[]>([])
   const [newSpecial, setNewSpecial] = useState({
@@ -978,11 +979,7 @@ export default function AdminPage() {
         description: `Welcome ${user.role === 'super_admin' ? 'Super Admin' : user.role}!`,
       })
     } catch (error) {
-      toast({
-        title: "Login Failed", 
-        description: error instanceof Error ? error.message : "Invalid credentials",
-        variant: "destructive",
-      })
+      setShowWrongPasswordModal(true)
     } finally {
       setIsLoading(false)
     }
@@ -1363,6 +1360,7 @@ export default function AdminPage() {
   }
 
   const [activeTab, setActiveTab] = useState("dashboard") // Add this
+  const dateRange = useDateRange("month")
 
   if (!isClient) {
     return <div>Loading...</div>
@@ -1412,6 +1410,7 @@ export default function AdminPage() {
             </form>
           </CardContent>
         </Card>
+        <WrongPasswordModal open={showWrongPasswordModal} onClose={() => setShowWrongPasswordModal(false)} />
       </div>
     )
   }
@@ -1480,47 +1479,23 @@ export default function AdminPage() {
                 Dashboard
               </Button>
               
-              {userType === "superadmin" && (
-                <Button
-                  variant={activeTab === "inventory-items" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("inventory-items")}
-                  className="flex-1 sm:flex-none"
-                >
-                  <Package2 className="h-4 w-4 mr-2" />
-                  Inventory Items
-                </Button>
-              )}
-
               <Button
-                variant={activeTab === "order-inventory" ? "default" : "ghost"}
-                onClick={() => setActiveTab("order-inventory")}
+                variant={activeTab === "inventory" ? "default" : "ghost"}
+                onClick={() => setActiveTab("inventory")}
                 className="flex-1 sm:flex-none"
               >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Order Inventory
+                <Package2 className="h-4 w-4 mr-2" />
+                Inventory
               </Button>
 
-              {userType === "superadmin" && (
-                <Button
-                  variant={activeTab === "required-inventory" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("required-inventory")}
-                  className="flex-1 sm:flex-none"
-                >
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Required Inventory
-                </Button>
-              )}
-
-              {userType === "superadmin" && (
-                <Button
-                  variant={activeTab === "inventory-insights" ? "default" : "ghost"}
-                  onClick={() => setActiveTab("inventory-insights")}
-                  className="flex-1 sm:flex-none"
-                >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Inventory Insights
-                </Button>
-              )}
+              <Button
+                variant={activeTab === "sales" ? "default" : "ghost"}
+                onClick={() => setActiveTab("sales")}
+                className="flex-1 sm:flex-none"
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Sales
+              </Button>
 
               {userType === "superadmin" && (
                 <Button
@@ -1537,19 +1512,56 @@ export default function AdminPage() {
         )}
 
         {/* Content based on active tab */}
-        {activeTab === "inventory-items" && userType === "superadmin" ? (
-          <InventoryItems userType={userType} />
-        ) : activeTab === "order-inventory" ? (
-          <OrderInventory userType={userType} currentUser={currentUser} />
-        ) : activeTab === "required-inventory" && userType === "superadmin" ? (
-          <RequiredInventory userType={userType} />
-        ) : activeTab === "inventory-insights" && userType === "superadmin" ? (
-          <InventoryInsights userType={userType} />
+        {activeTab === "inventory" ? (
+          <div className="space-y-4">
+            <DateRangeFilterBar
+              range={dateRange.range}
+              onRangeChange={dateRange.setRange}
+              customStart={dateRange.customStart}
+              customEnd={dateRange.customEnd}
+              onCustomStartChange={dateRange.setCustomStart}
+              onCustomEndChange={dateRange.setCustomEnd}
+            />
+            <InventoryEntriesTab dateRangeParams={dateRange.params} isReady={dateRange.isReady} currentUser={currentUser} />
+          </div>
+        ) : activeTab === "sales" ? (
+          <div className="space-y-4">
+            <DateRangeFilterBar
+              range={dateRange.range}
+              onRangeChange={dateRange.setRange}
+              customStart={dateRange.customStart}
+              customEnd={dateRange.customEnd}
+              onCustomStartChange={dateRange.setCustomStart}
+              onCustomEndChange={dateRange.setCustomEnd}
+            />
+            <SalesTab dateRangeParams={dateRange.params} isReady={dateRange.isReady} currentUser={currentUser} />
+          </div>
         ) : activeTab === "feedback" && userType === "superadmin" ? (
           <FeedbackManagement userType={userType} />
         ) : (
           <>
             {/* Existing dashboard content - Stats Cards, Orders, etc. */}
+            {/* Inventory & Sales overview - all users */}
+            <div className="mb-8 space-y-3">
+              <DateRangeFilterBar
+                range={dateRange.range}
+                onRangeChange={dateRange.setRange}
+                customStart={dateRange.customStart}
+                customEnd={dateRange.customEnd}
+                onCustomStartChange={dateRange.setCustomStart}
+                onCustomEndChange={dateRange.setCustomEnd}
+              />
+              <InventorySalesDashboard dateRangeParams={dateRange.params} isReady={dateRange.isReady} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button onClick={() => setActiveTab("inventory")} className="w-full bg-amber-600 hover:bg-amber-700">
+                  <Plus className="h-4 w-4 mr-2" /> Add Inventory
+                </Button>
+                <Button onClick={() => setActiveTab("sales")} variant="outline" className="w-full">
+                  <Plus className="h-4 w-4 mr-2" /> Add Sale
+                </Button>
+              </div>
+            </div>
+
             {/* Stats Cards - Only for Super Admin */}
             {userType === "superadmin" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">

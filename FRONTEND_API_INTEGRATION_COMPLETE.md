@@ -176,7 +176,7 @@ Frontend should be running on: `http://localhost:3001`
 2. Add items to cart
 3. Enter customer details
 4. Place order
-5. ✅ Check Google Sheets → Order appears in `Q4_2025_Orders`
+5. ✅ Check Google Sheets → Order appears in `Q4_2026_Orders`
 
 #### **View Orders (Admin):**
 1. Go to admin panel
@@ -186,7 +186,7 @@ Frontend should be running on: `http://localhost:3001`
 #### **Update Order Status:**
 1. Click status buttons: Pending → Preparing → Ready → Completed
 2. ✅ Check Google Sheets → Status updated
-3. ✅ Check `Q4_2025_Order_Status_History` → History recorded
+3. ✅ Check `Q4_2026_Order_Status_History` → History recorded
 
 #### **Update Payment:**
 1. Change payment status: Unpaid → Paid
@@ -226,9 +226,9 @@ Backend API (Express.js)
     ↓ Google Sheets API
     ↓
 Google Sheets (Quarterly Tabs)
-    - Q4_2025_Orders
-    - Q4_2025_Order_Items  
-    - Q4_2025_Order_Status_History
+    - Q4_2026_Orders
+    - Q4_2026_Order_Items  
+    - Q4_2026_Order_Status_History
 ```
 
 ---
@@ -266,7 +266,7 @@ Unpaid → Paid
 ### **Issue: "Menu item not found"**
 **Solution:**
 1. Run: `http://localhost:3000/api/fix-sheet-headers`
-2. Check `Q4_2025_Menu_Items` has data
+2. Check `Q4_2026_Menu_Items` has data
 3. Verify availability column says "true" or "available"
 
 ---

@@ -105,7 +105,7 @@ export default function LogoShowcase() {
                     <ZishCafeLogo size={80} />
                     <div>
                       <h3 className="text-xl font-bold">Zish Cafe</h3>
-                      <p className="text-purple-100">Mini England Since 2025</p>
+                      <p className="text-purple-100">Mini England Since 2026</p>
                       <p className="text-sm text-purple-200 mt-2">
                         📍 123 Cafe Street
                         <br />📞 +91 98765 43210

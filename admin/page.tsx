@@ -216,7 +216,7 @@ const menuItems: MenuItem[] = [
 // Admin credentials
 const ADMIN_CREDENTIALS = {
   username: "admin",
-  password: "zish2025",
+  password: "zish2026",
 }
 
 export default function AdminPage() {

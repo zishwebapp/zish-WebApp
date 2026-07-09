@@ -31,7 +31,10 @@ export async function login(username: string, password: string) {
     
     return user;
   } catch (error) {
-    console.error('Login error:', error);
+    // Wrong credentials is an expected failure, not a bug — console.warn
+    // (not console.error) so Next.js's dev overlay doesn't hijack the
+    // screen and hide the WrongPasswordModal that's about to show.
+    console.warn('Login error:', error);
     throw error;
   }
 }
@@ -66,7 +69,8 @@ export async function register(name: string, email: string, password: string) {
     
     return user;
   } catch (error) {
-    console.error('Registration error:', error);
+    // Same reasoning as login() above: expected failure, not a bug.
+    console.warn('Registration error:', error);
     throw error;
   }
 }

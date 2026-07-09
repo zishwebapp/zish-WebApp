@@ -57,7 +57,7 @@ export function ZishCafeLogo({ size = 300, className = "" }: ZishCafeLogoProps) 
                 Zish Cafe
               </div>
 
-              {/* Bottom text - Since 2025 */}
+              {/* Bottom text - Since 2026 */}
               <div
                 className="text-yellow-300 font-semibold tracking-wide"
                 style={{
@@ -66,7 +66,7 @@ export function ZishCafeLogo({ size = 300, className = "" }: ZishCafeLogoProps) 
                   fontFamily: "serif",
                 }}
               >
-                Since 2025
+                Since 2026
               </div>
             </div>
 

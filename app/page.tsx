@@ -36,7 +36,7 @@ import { MobileMenuSearch } from "@/components/mobile-menu-search"
 import { MenuSearchBar } from "@/components/menu-search-bar"
 import { useToast } from "@/hooks/use-toast"
 import { fetchMenuItems } from "@/lib/api"
-import { MenuItem } from "@/lib/types"
+import { MenuItem, CATEGORY_MAP } from "@/lib/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface OrderStats {
@@ -574,7 +574,7 @@ function isNonVegItem(itemName: string): boolean {
 }
 
 export default function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState("Bewerages")
+  const [selectedCategory, setSelectedCategory] = useState(Object.values(CATEGORY_MAP)[0])
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [showOrderPlacedPopup, setShowOrderPlacedPopup] = useState(false)
   const [orderPlacedInfo, setOrderPlacedInfo] = useState<{id: string; totalAmount: number} | null>(null)
@@ -801,16 +801,9 @@ export default function HomePage() {
     }
   }, [])
 
-  // Get unique categories from menu items
-  const categories = [
-    "Bewerages",
-    "Quick Bites", 
-    "Ice Cream & Scoops",
-    "Fresh Juice",
-    "Moctails",
-    "Milk Shakes",
-    "Milk Shake With Ice Creams"
-  ]
+  // Single source of truth for categories (lib/types.ts CATEGORY_MAP) so this
+  // list can never drift out of sync with what the menu items actually use.
+  const categories = Object.values(CATEGORY_MAP)
 
   const filteredItems = menuItems.filter((item) => {
     // Global search filter - searches across all items regardless of category
@@ -982,7 +975,7 @@ export default function HomePage() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 bg-clip-text text-transparent">
                   Zish Cafe
                 </h1>
-                <p className="text-xs text-gray-500 font-medium">Since 2025</p>
+                <p className="text-xs text-gray-500 font-medium">Since 2026</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -1561,7 +1554,7 @@ export default function HomePage() {
               </h2>
 
               <p className="text-gray-600 mb-6 leading-relaxed text-lg">
-                Founded in <span className="font-semibold text-amber-600">2025</span>, Zish Cafe has been serving the
+                Founded in <span className="font-semibold text-amber-600">2026</span>, Zish Cafe has been serving the
                 community with exceptional fresh juices, creamy ice creams, and delicious food. Our passion for quality
                 ingredients and artisanal preparation methods ensures every item is perfect.
               </p>
@@ -1717,11 +1710,11 @@ export default function HomePage() {
               <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
                 Zish Cafe
               </h3>
-              <p className="text-xs text-gray-400">Since 2025</p>
+              <p className="text-xs text-gray-400">Since 2026</p>
             </div>
           </div>
 
-          <p className="text-gray-300 mb-2 text-lg">© 2025 Zish Cafe. All rights reserved.</p>
+          <p className="text-gray-300 mb-2 text-lg">© 2026 Zish Cafe. All rights reserved.</p>
           <p className="text-sm text-gray-400 mb-6">Developed with ❤️ by Hammad</p>
 
           <div className="flex justify-center space-x-8 mb-8">
