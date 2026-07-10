@@ -1,5 +1,4 @@
 import type { ApiResponse, BackendMenuItem, MenuItem } from './types.ts'
-import { CATEGORY_MAP } from './types.ts'
 
 // API Configuration - Updated to use port 3000 for Google Sheets backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api'
@@ -26,7 +25,7 @@ function transformMenuItem(backendItem: BackendMenuItem): MenuItem {
     id: backendItem.id,
     name: backendItem.name,
     price: backendItem.price,
-    category: CATEGORY_MAP[backendItem.category_id] || 'Other',
+    category: backendItem.category || 'Other',
     description: backendItem.description,
     image: backendItem.image_url || `/images/menu/${getImageFileName(backendItem.name)}`,
     isAvailable: backendItem.is_available,
@@ -103,17 +102,13 @@ export async function fetchAvailableMenuItems(): Promise<MenuItem[]> {
   }
 }
 
-export async function fetchMenuItemsByCategory(categoryId: number): Promise<MenuItem[]> {
+export async function fetchMenuItemsByCategory(category: string): Promise<MenuItem[]> {
   try {
     // Fetch all items and filter by category on the client side
     const allItems = await fetchMenuItems();
-    const categoryName = CATEGORY_MAP[categoryId];
-    if (!categoryName) {
-      throw new Error(`Invalid category ID: ${categoryId}`);
-    }
-    return allItems.filter(item => item.category === categoryName);
+    return allItems.filter(item => item.category === category);
   } catch (error) {
     console.error('Error fetching menu items by category:', error)
     throw error
   }
-} 
+}

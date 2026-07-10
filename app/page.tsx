@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +36,7 @@ import { MobileMenuSearch } from "@/components/mobile-menu-search"
 import { MenuSearchBar } from "@/components/menu-search-bar"
 import { useToast } from "@/hooks/use-toast"
 import { fetchMenuItems } from "@/lib/api"
-import { MenuItem, CATEGORY_MAP } from "@/lib/types"
+import { MenuItem } from "@/lib/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface OrderStats {
@@ -574,7 +574,7 @@ function isNonVegItem(itemName: string): boolean {
 }
 
 export default function HomePage() {
-  const [selectedCategory, setSelectedCategory] = useState(Object.values(CATEGORY_MAP)[0])
+  const [selectedCategory, setSelectedCategory] = useState("")
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [showOrderPlacedPopup, setShowOrderPlacedPopup] = useState(false)
   const [orderPlacedInfo, setOrderPlacedInfo] = useState<{id: string; totalAmount: number} | null>(null)
@@ -801,9 +801,27 @@ export default function HomePage() {
     }
   }, [])
 
-  // Single source of truth for categories (lib/types.ts CATEGORY_MAP) so this
-  // list can never drift out of sync with what the menu items actually use.
-  const categories = Object.values(CATEGORY_MAP)
+  // Derived directly from the fetched menu items (which now carry the real
+  // category name straight from the sheet) instead of a separate hardcoded
+  // list — that's exactly what caused the "Bewerages" mismatch bug before.
+  // Sorted by item count descending, so the biggest categories (e.g. Original
+  // Shakes) show up first and small ones (e.g. Momo's) show up last.
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const item of menuItems) {
+      if (!item.category) continue
+      counts.set(item.category, (counts.get(item.category) || 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([category]) => category)
+  }, [menuItems])
+
+  useEffect(() => {
+    if (!selectedCategory && categories.length > 0) {
+      setSelectedCategory(categories[0])
+    }
+  }, [categories, selectedCategory])
 
   const filteredItems = menuItems.filter((item) => {
     // Global search filter - searches across all items regardless of category

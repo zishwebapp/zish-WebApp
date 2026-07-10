@@ -12,7 +12,7 @@ export interface BackendMenuItem {
   id: number
   name: string
   price: number
-  category_id: number
+  category: string
   description: string
   image_url: string
   is_available: boolean
@@ -246,25 +246,6 @@ export interface OrdersInsights {
   completed_orders_amount: number;
   total_items_sold: number;
   top_items: OrdersTopItem[];
-}
-
-// Category mapping
-export const CATEGORY_MAP: Record<number, string> = {
-  1: "Momo's",
-  2: "Fries / Snacks",
-  3: "Burger",
-  4: "Sandwich's",
-  5: "Ice Cream Sundae",
-  6: "Maggie",
-  7: "ZISH's Signature",
-  8: "ZISH Platter",
-  9: "Classic Lassi",
-  10: "Coffee",
-  11: "Falooda",
-  12: "Seasonal Juice",
-  13: "Original Shakes",
-  14: "Nutella",
-  15: "Soda & Mojito"
 }
 
 // Order status display mapping - Updated for Google Sheets Backend
