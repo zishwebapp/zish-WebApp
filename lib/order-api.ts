@@ -5,6 +5,9 @@ import type {
   OrderStats,
   OrderSubmission,
   OrderStatusUpdate,
+  OrderItemStatusUpdate,
+  AddOrderItemPayload,
+  UpdateOrderItemQuantityPayload,
   PaymentStatusUpdate,
   OrderCancellation,
   OrdersListResponse,
@@ -15,6 +18,18 @@ import type {
 
 // API Configuration - Updated for Google Sheets Backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+
+// Error thrown by order-editing calls. Carries the backend's `code` field so
+// callers can react to specific cases (e.g. 'LAST_ITEM') instead of just
+// showing a generic failure message.
+export class OrderApiError extends Error {
+  code?: string
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = 'OrderApiError'
+    this.code = code
+  }
+}
 
 // Helper function to transform backend order to frontend format
 // Updated to handle Google Sheets API response format
@@ -42,7 +57,8 @@ function transformOrder(backendOrder: BackendOrder): Order {
       itemPrice: Number(item.itemPrice || item.item_price || item.price) || 0,
       quantity: Number(item.quantity) || 0,
       specialInstructions: item.specialInstructions || item.special_instructions || undefined,
-      subtotal: Number(item.subtotal) || 0
+      subtotal: Number(item.subtotal) || 0,
+      itemStatus: item.itemStatus || item.item_status || 'pending'
     })),
     createdAt: backendOrder.created_at,
     updatedAt: backendOrder.updated_at || backendOrder.created_at
@@ -123,10 +139,12 @@ export async function placeOrder(orderData: OrderSubmission): Promise<Order> {
       orderStatus: orderData_response.status || 'pending',
       paymentStatus: 'unpaid',
       items: (orderData_response.items || []).map((item: any) => ({
+        id: item.id,
         itemName: item.itemName || '',
         itemPrice: Number(item.price) || 0,
         quantity: Number(item.quantity) || 0,
-        subtotal: Number(item.subtotal) || 0
+        subtotal: Number(item.subtotal) || 0,
+        itemStatus: item.itemStatus || 'pending'
       })),
       createdAt: orderData_response.createdAt || new Date().toISOString(),
       updatedAt: orderData_response.createdAt || new Date().toISOString()
@@ -278,6 +296,122 @@ export async function updateOrderStatus(orderId: string, statusUpdate: OrderStat
     }
   } catch (error) {
     console.error('Error updating order status:', error)
+    throw error
+  }
+}
+
+// Update a single item's delivery status (e.g. mark "Paneer Momo" as delivered
+// while "Spicy Fries" is still pending, for kitchens that deliver items one at a time)
+export async function updateOrderItemStatus(
+  orderId: string,
+  itemId: string,
+  itemUpdate: OrderItemStatusUpdate
+): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/items/${itemId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        itemStatus: itemUpdate.itemStatus
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const apiResponse: ApiResponse<any> = await response.json()
+
+    if (!apiResponse.success) {
+      throw new Error(apiResponse.message || 'Failed to update item status')
+    }
+  } catch (error) {
+    console.error('Error updating order item status:', error)
+    throw error
+  }
+}
+
+// Add a new item to an existing order (e.g. customer calls back and asks for one more thing)
+export async function addOrderItem(orderId: string, payload: AddOrderItemPayload): Promise<{ newTotalAmount: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/items`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const apiResponse: ApiResponse<any> = await response.json()
+
+    if (!response.ok || !apiResponse.success) {
+      throw new OrderApiError(apiResponse.message || `HTTP error! status: ${response.status}`, apiResponse.code)
+    }
+
+    return { newTotalAmount: apiResponse.data.newTotalAmount }
+  } catch (error) {
+    console.error('Error adding order item:', error)
+    throw error
+  }
+}
+
+// Change an existing order item's quantity
+export async function updateOrderItemQuantity(
+  orderId: string,
+  itemId: string,
+  payload: UpdateOrderItemQuantityPayload
+): Promise<{ newTotalAmount: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/items/${itemId}/quantity`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const apiResponse: ApiResponse<any> = await response.json()
+
+    if (!response.ok || !apiResponse.success) {
+      throw new OrderApiError(apiResponse.message || `HTTP error! status: ${response.status}`, apiResponse.code)
+    }
+
+    return { newTotalAmount: apiResponse.data.newTotalAmount }
+  } catch (error) {
+    console.error('Error updating order item quantity:', error)
+    throw error
+  }
+}
+
+// Remove an item from an order. Throws an OrderApiError with code 'LAST_ITEM'
+// if this is the only item left on the order — callers should catch that and
+// prompt the admin to cancel the order instead.
+export async function removeOrderItem(orderId: string, itemId: string): Promise<{ newTotalAmount: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/items/${itemId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const apiResponse: ApiResponse<any> = await response.json()
+
+    if (!response.ok || !apiResponse.success) {
+      throw new OrderApiError(apiResponse.message || `HTTP error! status: ${response.status}`, apiResponse.code)
+    }
+
+    return { newTotalAmount: apiResponse.data.newTotalAmount }
+  } catch (error) {
+    // LAST_ITEM is an expected, handled outcome (caller shows a confirm dialog),
+    // not a real failure, so don't log it as an error (Next.js dev mode turns
+    // any console.error into a full-screen crash overlay).
+    if (!(error instanceof OrderApiError && error.code === 'LAST_ITEM')) {
+      console.error('Error removing order item:', error)
+    }
     throw error
   }
 }

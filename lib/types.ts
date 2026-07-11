@@ -5,6 +5,7 @@ export interface ApiResponse<T> {
   message?: string
   data: T
   error?: string
+  code?: string
 }
 
 // Backend Menu Item (from API)
@@ -101,6 +102,8 @@ export interface BackendOrderItem {
   specialInstructions?: string // Alternative field name
   special_instructions?: string | null // Support both naming conventions
   subtotal: number
+  itemStatus?: 'pending' | 'delivered' // Alternative field name
+  item_status?: 'pending' | 'delivered' // Support both naming conventions
 }
 
 // Backend Order (from API) - Updated for Google Sheets Backend
@@ -158,6 +161,7 @@ export interface OrderItem {
   quantity: number
   specialInstructions?: string
   subtotal: number
+  itemStatus?: 'pending' | 'delivered' // Per-item delivery status
 }
 
 // Order submission data
@@ -180,6 +184,23 @@ export interface OrderStatusUpdate {
   status: 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled' // Updated statuses
   changedBy?: string
   notes?: string
+}
+
+// Order item status update - marks a single item as delivered/pending
+export interface OrderItemStatusUpdate {
+  itemStatus: 'pending' | 'delivered'
+}
+
+// Add a new item to an existing order
+export interface AddOrderItemPayload {
+  menuItemId: number
+  quantity: number
+  specialInstructions?: string
+}
+
+// Change an existing order item's quantity
+export interface UpdateOrderItemQuantityPayload {
+  quantity: number
 }
 
 // Payment status update - Updated for Google Sheets Backend

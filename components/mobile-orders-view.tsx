@@ -286,13 +286,20 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                         <div className="space-y-4">
                           {/* Order Items */}
                           <div>
-                            <h4 className="font-semibold mb-2 text-gray-800">Items Ordered:</h4>
+                            <h4 className="font-semibold mb-2 text-gray-800 flex items-center gap-2">
+                              Items Ordered:
+                              {order.items && order.items.length > 0 && (
+                                <span className="text-xs font-normal text-gray-500">
+                                  ({order.items.filter(i => i.itemStatus === 'delivered').length}/{order.items.length} delivered)
+                                </span>
+                              )}
+                            </h4>
                             <div className="space-y-2">
                               {order.items && order.items.length > 0 ? (
                                 order.items.map((item, idx) => (
                                   <div
                                     key={idx}
-                                    className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                                    className={`flex justify-between items-center p-3 rounded-lg ${item.itemStatus === 'delivered' ? 'bg-green-50' : 'bg-gray-50'}`}
                                   >
                                     <div>
                                       <span className="font-medium text-gray-800">
@@ -302,7 +309,19 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                                         <p className="text-xs text-gray-500 mt-1">Note: {item.specialInstructions}</p>
                                       )}
                                     </div>
-                                    <span className="font-semibold text-amber-600">₹{formatCurrency(item.subtotal)}</span>
+                                    <div className="flex items-center gap-2">
+                                      {item.itemStatus === 'delivered' ? (
+                                        <Badge className="bg-green-600 hover:bg-green-600 text-xs">
+                                          <CheckCircle className="h-3 w-3 mr-1" />
+                                          Delivered
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-xs text-gray-500">
+                                          Pending
+                                        </Badge>
+                                      )}
+                                      <span className="font-semibold text-amber-600">₹{formatCurrency(item.subtotal)}</span>
+                                    </div>
                                   </div>
                                 ))
                               ) : (

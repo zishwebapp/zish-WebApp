@@ -8,6 +8,18 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import {
   Package,
   Clock,
   CheckCircle,
@@ -27,11 +39,27 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  Plus,
+  Minus,
+  ChevronsUpDown,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
-import { fetchAllOrders, updateOrderStatus, updatePaymentStatus, cancelOrder, deleteOrder, checkDataIntegrity } from "@/lib/order-api"
-import type { Order, OrderStatusUpdate, PaymentStatusUpdate, OrderCancellation } from "@/lib/types"
+import {
+  fetchAllOrders,
+  updateOrderStatus,
+  updateOrderItemStatus,
+  addOrderItem,
+  updateOrderItemQuantity,
+  removeOrderItem,
+  OrderApiError,
+  updatePaymentStatus,
+  cancelOrder,
+  deleteOrder,
+  checkDataIntegrity,
+} from "@/lib/order-api"
+import { fetchAvailableMenuItems } from "@/lib/api"
+import type { Order, OrderStatusUpdate, PaymentStatusUpdate, OrderCancellation, MenuItem } from "@/lib/types"
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/types"
 import { OrderPDFService } from '@/lib/pdf-service'
 
@@ -55,6 +83,14 @@ export function OrderManagement({ userType }: OrderManagementProps) {
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [updatingOrders, setUpdatingOrders] = useState<Set<number>>(new Set())
+  const [updatingItems, setUpdatingItems] = useState<Set<string>>(new Set())
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [addItemOrderId, setAddItemOrderId] = useState<string | null>(null)
+  const [addItemMenuId, setAddItemMenuId] = useState<string>("")
+  const [addItemQuantity, setAddItemQuantity] = useState<number>(1)
+  const [addingItem, setAddingItem] = useState(false)
+  const [addItemPickerOpen, setAddItemPickerOpen] = useState<string | null>(null)
+  const [lastItemDialogOrderId, setLastItemDialogOrderId] = useState<string | null>(null)
   const { toast } = useToast()
 
   // No longer needed - Google Sheets backend uses 'completed' status directly
@@ -113,6 +149,9 @@ export function OrderManagement({ userType }: OrderManagementProps) {
   useEffect(() => {
     if (userType === "admin" || userType === "superadmin") {
       loadOrders()
+      fetchAvailableMenuItems()
+        .then(setMenuItems)
+        .catch(err => console.error('Failed to load menu items for order editing:', err))
     }
   }, [userType])
 
@@ -168,6 +207,160 @@ export function OrderManagement({ userType }: OrderManagementProps) {
       setUpdatingOrders(prev => {
         const newSet = new Set(prev)
         newSet.delete(orderId)
+        return newSet
+      })
+    }
+  }
+
+  const handleItemStatusUpdate = async (
+    orderId: string,
+    itemId: string,
+    newStatus: 'pending' | 'delivered'
+  ) => {
+    try {
+      setUpdatingItems(prev => new Set(prev).add(itemId))
+
+      // Update local state immediately for better UX
+      setOrders(prevOrders => prevOrders.map(order =>
+        order.id === orderId
+          ? { ...order, items: order.items.map(item => item.id === itemId ? { ...item, itemStatus: newStatus } : item) }
+          : order
+      ))
+      setSelectedOrder(prev =>
+        prev && prev.id === orderId
+          ? { ...prev, items: prev.items.map(item => item.id === itemId ? { ...item, itemStatus: newStatus } : item) }
+          : prev
+      )
+
+      await updateOrderItemStatus(orderId, itemId, { itemStatus: newStatus })
+
+      // Refresh from server to ensure consistency (also picks up the
+      // automatic "ready" bump if this was the last item delivered)
+      await loadOrders(currentPage)
+
+      toast({
+        title: "Item Updated",
+        description: newStatus === 'delivered' ? "Item marked as delivered" : "Item marked as pending",
+      })
+    } catch (err) {
+      console.error('Failed to update item status:', err)
+      // Revert local change on error
+      await loadOrders(currentPage)
+      toast({
+        title: "Update Failed",
+        description: "Failed to update item status. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(itemId)
+        return newSet
+      })
+    }
+  }
+
+  const handleAddItem = async (orderId: string) => {
+    if (!addItemMenuId) return
+    const menuItem = menuItems.find(m => String(m.id) === addItemMenuId)
+    if (!menuItem) return
+
+    try {
+      setAddingItem(true)
+      await addOrderItem(orderId, {
+        menuItemId: menuItem.id,
+        quantity: addItemQuantity,
+      })
+
+      await loadOrders(currentPage)
+
+      setAddItemOrderId(null)
+      setAddItemMenuId("")
+      setAddItemQuantity(1)
+      setAddItemPickerOpen(null)
+
+      toast({
+        title: "Item Added",
+        description: `${menuItem.name} x${addItemQuantity} added to the order`,
+      })
+    } catch (err) {
+      console.error('Failed to add item:', err)
+      toast({
+        title: "Add Failed",
+        description: err instanceof Error ? err.message : "Failed to add item. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setAddingItem(false)
+    }
+  }
+
+  const handleQuantityChange = async (orderId: string, itemId: string, currentQuantity: number, delta: number) => {
+    const newQuantity = currentQuantity + delta
+    if (newQuantity < 1) return // use the remove button to go below 1
+
+    try {
+      setUpdatingItems(prev => new Set(prev).add(itemId))
+
+      // Optimistic update
+      setOrders(prevOrders => prevOrders.map(order =>
+        order.id === orderId
+          ? {
+              ...order,
+              items: order.items.map(item =>
+                item.id === itemId
+                  ? { ...item, quantity: newQuantity, subtotal: item.itemPrice * newQuantity }
+                  : item
+              ),
+            }
+          : order
+      ))
+
+      await updateOrderItemQuantity(orderId, itemId, { quantity: newQuantity })
+      await loadOrders(currentPage)
+    } catch (err) {
+      console.error('Failed to update item quantity:', err)
+      await loadOrders(currentPage)
+      toast({
+        title: "Update Failed",
+        description: err instanceof Error ? err.message : "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(itemId)
+        return newSet
+      })
+    }
+  }
+
+  const handleRemoveItem = async (orderId: string, itemId: string) => {
+    try {
+      setUpdatingItems(prev => new Set(prev).add(itemId))
+
+      await removeOrderItem(orderId, itemId)
+      await loadOrders(currentPage)
+
+      toast({
+        title: "Item Removed",
+        description: "Item removed from the order",
+      })
+    } catch (err) {
+      if (err instanceof OrderApiError && err.code === 'LAST_ITEM') {
+        setLastItemDialogOrderId(orderId)
+      } else {
+        console.error('Failed to remove item:', err)
+        toast({
+          title: "Remove Failed",
+          description: err instanceof Error ? err.message : "Failed to remove item. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(itemId)
         return newSet
       })
     }
@@ -531,22 +724,191 @@ export function OrderManagement({ userType }: OrderManagementProps) {
 
                         {/* Items */}
                         <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Items:</h4>
+                          <h4 className="font-medium text-sm text-gray-700 mb-2">
+                            Items:
+                            {order.items.length > 0 && (
+                              <span className="ml-2 font-normal text-gray-500">
+                                ({order.items.filter(i => i.itemStatus === 'delivered').length}/{order.items.length} delivered)
+                              </span>
+                            )}
+                          </h4>
                           <div className="space-y-2">
-                            {order.items.map((item, index) => (
-                              <div key={index} className="bg-gray-50 p-3 rounded-md">
-                                <div className="flex justify-between items-center text-sm">
-                                  <span className="font-medium">{item.itemName} x{item.quantity}</span>
-                                  <span className="font-medium">₹{item.subtotal}</span>
-                                </div>
-                                {item.specialInstructions && (
-                                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                                    <span className="text-blue-800 font-medium">Item Note: </span>
-                                    <span className="text-blue-700">{item.specialInstructions}</span>
+                            {order.items.map((item, index) => {
+                              const isDelivered = item.itemStatus === 'delivered'
+                              const isItemUpdating = !!item.id && updatingItems.has(item.id)
+                              const canToggleItem = !!item.id && order.orderStatus !== 'cancelled' && order.orderStatus !== 'completed'
+                              return (
+                                <div key={item.id || index} className={`p-3 rounded-md ${isDelivered ? 'bg-green-50' : 'bg-gray-50'}`}>
+                                  <div className="flex justify-between items-center text-sm gap-2 flex-wrap">
+                                    <span className="font-medium">{item.itemName}</span>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      {item.id && (
+                                        <div className="flex items-center border rounded-md">
+                                          <button
+                                            type="button"
+                                            className="p-1 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-transparent"
+                                            disabled={isItemUpdating}
+                                            onClick={() => handleQuantityChange(order.id, item.id as string, item.quantity, -1)}
+                                          >
+                                            <Minus className="h-3 w-3" />
+                                          </button>
+                                          <span className="px-2 text-xs w-6 text-center">{item.quantity}</span>
+                                          <button
+                                            type="button"
+                                            className="p-1 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-transparent"
+                                            disabled={isItemUpdating}
+                                            onClick={() => handleQuantityChange(order.id, item.id as string, item.quantity, 1)}
+                                          >
+                                            <Plus className="h-3 w-3" />
+                                          </button>
+                                        </div>
+                                      )}
+                                      <span className="font-medium">₹{item.subtotal}</span>
+                                      {canToggleItem ? (
+                                        <Button
+                                          variant={isDelivered ? "default" : "outline"}
+                                          size="sm"
+                                          className={isDelivered ? "bg-green-600 hover:bg-green-700 h-7 px-2 text-xs" : "h-7 px-2 text-xs"}
+                                          disabled={isItemUpdating}
+                                          onClick={() => handleItemStatusUpdate(order.id, item.id as string, isDelivered ? 'pending' : 'delivered')}
+                                        >
+                                          {isItemUpdating ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : isDelivered ? (
+                                            <>
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Delivered
+                                            </>
+                                          ) : (
+                                            "Mark Delivered"
+                                          )}
+                                        </Button>
+                                      ) : (
+                                        isDelivered && (
+                                          <Badge className="bg-green-600 hover:bg-green-600">
+                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                            Delivered
+                                          </Badge>
+                                        )
+                                      )}
+                                      {item.id && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                          disabled={isItemUpdating}
+                                          onClick={() => handleRemoveItem(order.id, item.id as string)}
+                                        >
+                                          {isItemUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
-                                )}
+                                  {item.specialInstructions && (
+                                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                      <span className="text-blue-800 font-medium">Item Note: </span>
+                                      <span className="text-blue-700">{item.specialInstructions}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Add Item */}
+                          <div className="mt-2">
+                            {addItemOrderId === order.id ? (
+                              <div className="border rounded-md p-3 bg-gray-50 space-y-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <Popover
+                                    open={addItemPickerOpen === order.id}
+                                    onOpenChange={(open) => setAddItemPickerOpen(open ? order.id : null)}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className="flex-1 justify-between font-normal"
+                                      >
+                                        {addItemMenuId
+                                          ? (() => {
+                                              const m = menuItems.find(m => String(m.id) === addItemMenuId)
+                                              return m ? `${m.name} - ₹${m.price}` : "Select an item to add"
+                                            })()
+                                          : "Select an item to add"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-0 w-[300px]" align="start">
+                                      <Command>
+                                        <CommandInput placeholder="Search menu items..." />
+                                        <CommandList>
+                                          <CommandEmpty>No item found.</CommandEmpty>
+                                          <CommandGroup>
+                                            {menuItems.map(m => (
+                                              <CommandItem
+                                                key={m.id}
+                                                value={m.name}
+                                                onSelect={() => {
+                                                  setAddItemMenuId(String(m.id))
+                                                  setAddItemPickerOpen(null)
+                                                }}
+                                              >
+                                                {m.name} - ₹{m.price}
+                                              </CommandItem>
+                                            ))}
+                                          </CommandGroup>
+                                        </CommandList>
+                                      </Command>
+                                    </PopoverContent>
+                                  </Popover>
+                                  <div className="flex items-center border rounded-md self-start">
+                                    <button
+                                      type="button"
+                                      className="p-2 hover:bg-gray-200"
+                                      onClick={() => setAddItemQuantity(q => Math.max(1, q - 1))}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </button>
+                                    <span className="px-3 text-sm w-8 text-center">{addItemQuantity}</span>
+                                    <button
+                                      type="button"
+                                      className="p-2 hover:bg-gray-200"
+                                      onClick={() => setAddItemQuantity(q => q + 1)}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    disabled={!addItemMenuId || addingItem}
+                                    onClick={() => handleAddItem(order.id)}
+                                  >
+                                    {addingItem ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                                    Add
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setAddItemOrderId(null)
+                                      setAddItemMenuId("")
+                                      setAddItemQuantity(1)
+                                      setAddItemPickerOpen(null)
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
                               </div>
-                            ))}
+                            ) : (
+                              <Button variant="outline" size="sm" onClick={() => setAddItemOrderId(order.id)}>
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Item
+                              </Button>
+                            )}
                           </div>
                         </div>
 
@@ -824,18 +1186,52 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                 <div>
                   <Label className="font-medium">Order Items</Label>
                   <div className="mt-2 space-y-2">
-                    {selectedOrder.items.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                        <div>
-                          <p className="font-medium">{item.itemName}</p>
-                          <p className="text-sm text-gray-600">Qty: {item.quantity} × ₹{item.itemPrice}</p>
-                          {item.specialInstructions && (
-                            <p className="text-sm text-blue-600">Note: {item.specialInstructions}</p>
-                          )}
+                    {selectedOrder.items.map((item) => {
+                      const isDelivered = item.itemStatus === 'delivered'
+                      const isItemUpdating = !!item.id && updatingItems.has(item.id)
+                      const canToggleItem = !!item.id && selectedOrder.orderStatus !== 'cancelled' && selectedOrder.orderStatus !== 'completed'
+                      return (
+                        <div key={item.id} className={`flex justify-between items-center p-3 rounded-md ${isDelivered ? 'bg-green-50' : 'bg-gray-50'}`}>
+                          <div>
+                            <p className="font-medium">{item.itemName}</p>
+                            <p className="text-sm text-gray-600">Qty: {item.quantity} × ₹{item.itemPrice}</p>
+                            {item.specialInstructions && (
+                              <p className="text-sm text-blue-600">Note: {item.specialInstructions}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">₹{item.subtotal}</p>
+                            {canToggleItem ? (
+                              <Button
+                                variant={isDelivered ? "default" : "outline"}
+                                size="sm"
+                                className={isDelivered ? "bg-green-600 hover:bg-green-700 h-7 px-2 text-xs" : "h-7 px-2 text-xs"}
+                                disabled={isItemUpdating}
+                                onClick={() => handleItemStatusUpdate(selectedOrder.id, item.id as string, isDelivered ? 'pending' : 'delivered')}
+                              >
+                                {isItemUpdating ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : isDelivered ? (
+                                  <>
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Delivered
+                                  </>
+                                ) : (
+                                  "Mark Delivered"
+                                )}
+                              </Button>
+                            ) : (
+                              isDelivered && (
+                                <Badge className="bg-green-600 hover:bg-green-600">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Delivered
+                                </Badge>
+                              )
+                            )}
+                          </div>
                         </div>
-                        <p className="font-medium">₹{item.subtotal}</p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -877,6 +1273,39 @@ export function OrderManagement({ userType }: OrderManagementProps) {
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!lastItemDialogOrderId} onOpenChange={(open) => !open && setLastItemDialogOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Can't remove the last item</AlertDialogTitle>
+            <AlertDialogDescription>
+              This is the only item left on this order. An order can't have zero items —
+              cancel the whole order instead if the customer no longer wants it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setLastItemDialogOrderId(null)}>Keep Item</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={async () => {
+                const orderId = lastItemDialogOrderId
+                setLastItemDialogOrderId(null)
+                if (!orderId) return
+                try {
+                  await updateOrderStatus(orderId, { status: 'cancelled', changedBy: 'admin' })
+                  await loadOrders(currentPage)
+                  toast({ title: "Order Cancelled", description: "Order has been cancelled successfully." })
+                } catch (err) {
+                  console.error('Failed to cancel order:', err)
+                  toast({ title: "Cancellation Failed", description: "Failed to cancel order. Please try again.", variant: "destructive" })
+                }
+              }}
+            >
+              Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 } 
