@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Package,
   Clock,
@@ -47,6 +49,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import {
   fetchAllOrders,
+  placeOrder,
   updateOrderStatus,
   updateOrderItemStatus,
   addOrderItem,
@@ -91,6 +94,15 @@ export function OrderManagement({ userType }: OrderManagementProps) {
   const [addingItem, setAddingItem] = useState(false)
   const [addItemPickerOpen, setAddItemPickerOpen] = useState<string | null>(null)
   const [lastItemDialogOrderId, setLastItemDialogOrderId] = useState<string | null>(null)
+  const [showNewOrderDialog, setShowNewOrderDialog] = useState(false)
+  const [newOrderCustomerName, setNewOrderCustomerName] = useState("")
+  const [newOrderCustomerPhone, setNewOrderCustomerPhone] = useState("")
+  const [newOrderInstructions, setNewOrderInstructions] = useState("")
+  const [newOrderItems, setNewOrderItems] = useState<{ menuItemId: number; name: string; price: number; quantity: number }[]>([])
+  const [newOrderPickerOpen, setNewOrderPickerOpen] = useState(false)
+  const [newOrderSelectedMenuId, setNewOrderSelectedMenuId] = useState("")
+  const [newOrderSelectedQty, setNewOrderSelectedQty] = useState(1)
+  const [placingNewOrder, setPlacingNewOrder] = useState(false)
   const { toast } = useToast()
 
   // No longer needed - Google Sheets backend uses 'completed' status directly
@@ -363,6 +375,91 @@ export function OrderManagement({ userType }: OrderManagementProps) {
         newSet.delete(itemId)
         return newSet
       })
+    }
+  }
+
+  const resetNewOrderForm = () => {
+    setNewOrderCustomerName("")
+    setNewOrderCustomerPhone("")
+    setNewOrderInstructions("")
+    setNewOrderItems([])
+    setNewOrderSelectedMenuId("")
+    setNewOrderSelectedQty(1)
+  }
+
+  const handleAddNewOrderItem = () => {
+    if (!newOrderSelectedMenuId) return
+    const menuItem = menuItems.find(m => String(m.id) === newOrderSelectedMenuId)
+    if (!menuItem) return
+
+    setNewOrderItems(prev => {
+      const existing = prev.find(i => i.menuItemId === menuItem.id)
+      if (existing) {
+        return prev.map(i => i.menuItemId === menuItem.id ? { ...i, quantity: i.quantity + newOrderSelectedQty } : i)
+      }
+      return [...prev, { menuItemId: menuItem.id, name: menuItem.name, price: menuItem.price, quantity: newOrderSelectedQty }]
+    })
+    setNewOrderSelectedMenuId("")
+    setNewOrderSelectedQty(1)
+  }
+
+  const handleRemoveNewOrderItem = (menuItemId: number) => {
+    setNewOrderItems(prev => prev.filter(i => i.menuItemId !== menuItemId))
+  }
+
+  const handleNewOrderItemQtyChange = (menuItemId: number, delta: number) => {
+    setNewOrderItems(prev =>
+      prev.map(i => (i.menuItemId === menuItemId ? { ...i, quantity: i.quantity + delta } : i)).filter(i => i.quantity >= 1)
+    )
+  }
+
+  const newOrderTotal = newOrderItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+
+  const handlePlaceNewOrder = async () => {
+    if (!newOrderCustomerName.trim()) {
+      toast({
+        title: "Missing Name",
+        description: "Please enter a customer name.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (newOrderItems.length === 0) {
+      toast({
+        title: "No Items",
+        description: "Add at least one item to place the order.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setPlacingNewOrder(true)
+      await placeOrder({
+        customerName: newOrderCustomerName.trim(),
+        customerPhone: newOrderCustomerPhone.trim(),
+        items: newOrderItems.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity })),
+        specialInstructions: newOrderInstructions.trim() || undefined,
+      })
+
+      setShowNewOrderDialog(false)
+      resetNewOrderForm()
+      setCurrentPage(1)
+      await loadOrders(1)
+
+      toast({
+        title: "Order Placed",
+        description: `Order created for ${newOrderCustomerName.trim()}`,
+      })
+    } catch (err) {
+      console.error('Failed to place order:', err)
+      toast({
+        title: "Failed to Place Order",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setPlacingNewOrder(false)
     }
   }
 
@@ -674,10 +771,16 @@ export function OrderManagement({ userType }: OrderManagementProps) {
             <ShoppingBag className="h-5 w-5" />
             <CardTitle>Orders Management</CardTitle>
           </div>
-          <Button onClick={() => loadOrders(currentPage)} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setShowNewOrderDialog(true)} size="sm" className="bg-orange-600 hover:bg-orange-700">
+              <Plus className="h-4 w-4 mr-2" />
+              New Order
+            </Button>
+            <Button onClick={() => loadOrders(currentPage)} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {orders.length > 0 ? (
@@ -1273,6 +1376,186 @@ export function OrderManagement({ userType }: OrderManagementProps) {
           </div>
         </div>
       )}
+
+      <Dialog
+        open={showNewOrderDialog}
+        onOpenChange={(open) => {
+          if (!open && !placingNewOrder) {
+            setShowNewOrderDialog(false)
+            resetNewOrderForm()
+          }
+        }}
+        modal={false}
+      >
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Order</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Customer Name *</Label>
+              <Input
+                value={newOrderCustomerName}
+                onChange={(e) => setNewOrderCustomerName(e.target.value)}
+                placeholder="Enter customer name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Phone Number (Optional)</Label>
+              <Input
+                value={newOrderCustomerPhone}
+                onChange={(e) => setNewOrderCustomerPhone(e.target.value)}
+                placeholder="Enter phone number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Items *</Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Popover open={newOrderPickerOpen} onOpenChange={setNewOrderPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="flex-1 justify-between font-normal">
+                      {newOrderSelectedMenuId
+                        ? (() => {
+                            const m = menuItems.find(m => String(m.id) === newOrderSelectedMenuId)
+                            return m ? `${m.name} - ₹${m.price}` : "Select an item"
+                          })()
+                        : "Select an item to add"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 w-[300px]" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search menu items..." />
+                      <CommandList>
+                        <CommandEmpty>No item found.</CommandEmpty>
+                        <CommandGroup>
+                          {menuItems.map(m => (
+                            <CommandItem
+                              key={m.id}
+                              value={m.name}
+                              onSelect={() => {
+                                setNewOrderSelectedMenuId(String(m.id))
+                                setNewOrderPickerOpen(false)
+                              }}
+                            >
+                              {m.name} - ₹{m.price}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex items-center border rounded-md self-start">
+                  <button
+                    type="button"
+                    className="p-2 hover:bg-gray-200"
+                    onClick={() => setNewOrderSelectedQty(q => Math.max(1, q - 1))}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <span className="px-3 text-sm w-8 text-center">{newOrderSelectedQty}</span>
+                  <button
+                    type="button"
+                    className="p-2 hover:bg-gray-200"
+                    onClick={() => setNewOrderSelectedQty(q => q + 1)}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+                <Button size="sm" disabled={!newOrderSelectedMenuId} onClick={handleAddNewOrderItem}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add
+                </Button>
+              </div>
+
+              {newOrderItems.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {newOrderItems.map(item => (
+                    <div key={item.menuItemId} className="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm">
+                      <span className="font-medium">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center border rounded-md">
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-gray-200"
+                            onClick={() => handleNewOrderItemQtyChange(item.menuItemId, -1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="px-2 text-xs w-6 text-center">{item.quantity}</span>
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-gray-200"
+                            onClick={() => handleNewOrderItemQtyChange(item.menuItemId, 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <span className="font-medium w-14 text-right">₹{item.price * item.quantity}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleRemoveNewOrderItem(item.menuItemId)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Special Instructions (Optional)</Label>
+              <Textarea
+                value={newOrderInstructions}
+                onChange={(e) => setNewOrderInstructions(e.target.value)}
+                placeholder="Any special requests for the whole order..."
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-between items-center pt-2 border-t font-semibold">
+              <span>Total:</span>
+              <span>₹{newOrderTotal}</span>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                disabled={placingNewOrder}
+                onClick={() => {
+                  setShowNewOrderDialog(false)
+                  resetNewOrderForm()
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                disabled={placingNewOrder || !newOrderCustomerName.trim() || newOrderItems.length === 0}
+                onClick={handlePlaceNewOrder}
+              >
+                {placingNewOrder ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Placing...
+                  </>
+                ) : (
+                  `Place Order - ₹${newOrderTotal}`
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!lastItemDialogOrderId} onOpenChange={(open) => !open && setLastItemDialogOrderId(null)}>
         <AlertDialogContent>
