@@ -29,6 +29,7 @@ export function MenuSearchBar({ searchTerm, onSearchChange, resultCount, classNa
         />
         {searchTerm && (
           <Button
+            id="clearMenuSearchBtn"
             variant="ghost"
             size="sm"
             onClick={clearSearch}

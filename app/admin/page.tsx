@@ -1404,7 +1404,7 @@ export default function AdminPage() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={isLoading} className="w-full bg-amber-600 hover:bg-amber-700">
+              <Button id="loginBtn" type="submit" disabled={isLoading} className="w-full bg-amber-600 hover:bg-amber-700">
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
@@ -1439,6 +1439,7 @@ export default function AdminPage() {
             {/* Only show Export Data for Super Admin */}
             {userType === "superadmin" && (
               <Button
+                id="exportDataBtn"
                 onClick={exportToExcel}
                 className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
@@ -1448,13 +1449,14 @@ export default function AdminPage() {
               </Button>
             )}
             <Link href="/" className="w-full sm:w-auto">
-              <Button variant="outline" className="flex items-center justify-center space-x-2 w-full">
+              <Button id="visitWebsiteBtn" variant="outline" className="flex items-center justify-center space-x-2 w-full">
                 <Home className="h-4 w-4" />
                 <span className="hidden sm:inline">Visit Website</span>
                 <span className="sm:hidden">Website</span>
               </Button>
             </Link>
             <Button
+              id="logoutBtn"
               onClick={handleLogout}
               variant="outline"
               className="flex items-center justify-center space-x-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 w-full sm:w-auto"
@@ -1471,6 +1473,7 @@ export default function AdminPage() {
           <div className="mb-6">
             <div className="flex flex-wrap gap-2 p-1 bg-white rounded-lg shadow-sm border">
               <Button
+                id="dashboardTabBtn"
                 variant={activeTab === "dashboard" ? "default" : "ghost"}
                 onClick={() => setActiveTab("dashboard")}
                 className="flex-1 sm:flex-none"
@@ -1480,6 +1483,7 @@ export default function AdminPage() {
               </Button>
               
               <Button
+                id="inventoryTabBtn"
                 variant={activeTab === "inventory" ? "default" : "ghost"}
                 onClick={() => setActiveTab("inventory")}
                 className="flex-1 sm:flex-none"
@@ -1489,6 +1493,7 @@ export default function AdminPage() {
               </Button>
 
               <Button
+                id="salesTabBtn"
                 variant={activeTab === "sales" ? "default" : "ghost"}
                 onClick={() => setActiveTab("sales")}
                 className="flex-1 sm:flex-none"
@@ -1499,6 +1504,7 @@ export default function AdminPage() {
 
               {userType === "superadmin" && (
                 <Button
+                  id="feedbackTabBtn"
                   variant={activeTab === "feedback" ? "default" : "ghost"}
                   onClick={() => setActiveTab("feedback")}
                   className="flex-1 sm:flex-none"
@@ -1553,10 +1559,10 @@ export default function AdminPage() {
               />
               <InventorySalesDashboard dateRangeParams={dateRange.params} isReady={dateRange.isReady} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Button onClick={() => setActiveTab("inventory")} className="w-full bg-amber-600 hover:bg-amber-700">
+                <Button id="addInventoryBtn" onClick={() => setActiveTab("inventory")} className="w-full bg-amber-600 hover:bg-amber-700">
                   <Plus className="h-4 w-4 mr-2" /> Add Inventory
                 </Button>
-                <Button onClick={() => setActiveTab("sales")} variant="outline" className="w-full">
+                <Button id="addSaleBtn" onClick={() => setActiveTab("sales")} variant="outline" className="w-full">
                   <Plus className="h-4 w-4 mr-2" /> Add Sale
                 </Button>
               </div>
@@ -1700,7 +1706,8 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Button 
+                    <Button
+                      id="clearAllDataBtn"
                       className="bg-purple-600 hover:bg-purple-700 text-white"
                       onClick={() => {
                         localStorage.clear()
@@ -1713,7 +1720,8 @@ export default function AdminPage() {
                     >
                       🗑️ Clear All Data
                     </Button>
-                    <Button 
+                    <Button
+                      id="backupDataBtn"
                       variant="outline"
                       className="border-purple-300 text-purple-700 hover:bg-purple-100"
                       onClick={() => {
@@ -1737,7 +1745,8 @@ export default function AdminPage() {
                     >
                       💾 Backup Data
                     </Button>
-                    <Button 
+                    <Button
+                      id="systemStatsBtn"
                       variant="outline"
                       className="border-purple-300 text-purple-700 hover:bg-purple-100"
                       onClick={() => {
@@ -1770,7 +1779,7 @@ export default function AdminPage() {
                     <Coffee className="h-5 w-5" />
                     <span>Today's Specials</span>
                   </CardTitle>
-                  <Button onClick={() => setShowAddSpecial(true)} className="bg-amber-600 hover:bg-amber-700">
+                  <Button id="openAddSpecialBtn" onClick={() => setShowAddSpecial(true)} className="bg-amber-600 hover:bg-amber-700">
                     Add Special
                   </Button>
                 </div>
@@ -1787,6 +1796,7 @@ export default function AdminPage() {
                       <div key={special?.id} className="relative border rounded-lg p-4 bg-white shadow-sm">
                         {(userType === "admin" || userType === "superadmin") && (
                           <button
+                            id={`removeSpecial-${special.id}-Btn`}
                             type="button"
                             aria-label="Remove special"
                             onClick={() => removeSpecial(special.id)}
@@ -1828,6 +1838,7 @@ export default function AdminPage() {
                     <Popover open={existingItemOpen} onOpenChange={setExistingItemOpen}>
                       <PopoverTrigger asChild>
                         <Button
+                          id="selectExistingItemBtn"
                           variant="outline"
                           role="combobox"
                           aria-expanded={existingItemOpen}
@@ -1909,10 +1920,10 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setShowAddSpecial(false)}>
+                    <Button id="cancelAddSpecialBtn" variant="outline" onClick={() => setShowAddSpecial(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={addTodaysSpecial} className="bg-amber-600 hover:bg-amber-700">
+                    <Button id="submitAddSpecialBtn" onClick={addTodaysSpecial} className="bg-amber-600 hover:bg-amber-700">
                       Add Special
                     </Button>
                   </div>

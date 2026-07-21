@@ -968,9 +968,10 @@ export default function HomePage() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {error}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              id="retryFetchMenuBtn"
+              variant="outline"
+              size="sm"
               onClick={refreshMenu}
               className="ml-2"
             >
@@ -1000,6 +1001,7 @@ export default function HomePage() {
               {/* Desktop Navigation */}
               <nav className="hidden md:flex space-x-8">
                 <button
+                  id="desktopMenuNavBtn"
                   onClick={() => scrollToSection("menu")}
                   className="text-gray-700 hover:text-amber-600 transition-all duration-300 font-medium relative group cursor-pointer"
                 >
@@ -1007,6 +1009,7 @@ export default function HomePage() {
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-600 to-orange-600 transition-all duration-300 group-hover:w-full"></span>
                 </button>
                 <button
+                  id="desktopMyOrdersNavBtn"
                   onClick={() => setMobileOrdersOpen(true)}
                   className="text-gray-700 hover:text-amber-600 transition-all duration-300 font-medium relative group cursor-pointer"
                 >
@@ -1014,6 +1017,7 @@ export default function HomePage() {
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-600 to-orange-600 transition-all duration-300 group-hover:w-full"></span>
                 </button>
                 <button
+                  id="desktopAboutNavBtn"
                   onClick={() => scrollToSection("about")}
                   className="text-gray-700 hover:text-amber-600 transition-all duration-300 font-medium relative group cursor-pointer"
                 >
@@ -1021,6 +1025,7 @@ export default function HomePage() {
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-600 to-orange-600 transition-all duration-300 group-hover:w-full"></span>
                 </button>
                 <button
+                  id="desktopContactNavBtn"
                   onClick={() => scrollToSection("contact")}
                   className="text-gray-700 hover:text-amber-600 transition-all duration-300 font-medium relative group cursor-pointer"
                 >
@@ -1038,6 +1043,7 @@ export default function HomePage() {
 
               {/* Mobile Menu Button */}
               <Button
+                id="mobileMenuToggleBtn"
                 variant="ghost"
                 size="sm"
                 className="md:hidden hover:bg-amber-50 transition-colors duration-300"
@@ -1053,6 +1059,7 @@ export default function HomePage() {
             <div className="md:hidden mt-4 pb-4 border-t border-amber-200/50 animate-fade-in">
               <nav className="flex flex-col space-y-4 pt-4">
                 <button
+                  id="mobileMenuNavBtn"
                   onClick={() => {
                     scrollToSection("menu")
                     setMobileMenuOpen(false)
@@ -1062,6 +1069,7 @@ export default function HomePage() {
                   Menu
                 </button>
                 <button
+                  id="mobileMyOrdersNavBtn"
                   onClick={() => {
                     setMobileOrdersOpen(true)
                     setMobileMenuOpen(false)
@@ -1071,6 +1079,7 @@ export default function HomePage() {
                   My Orders
                 </button>
                 <button
+                  id="mobileAboutNavBtn"
                   onClick={() => {
                     scrollToSection("about")
                     setMobileMenuOpen(false)
@@ -1080,6 +1089,7 @@ export default function HomePage() {
                   About
                 </button>
                 <button
+                  id="mobileContactNavBtn"
                   onClick={() => {
                     scrollToSection("contact")
                     setMobileMenuOpen(false)
@@ -1128,6 +1138,7 @@ export default function HomePage() {
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center animate-fade-in-delay-3">
             <Button
+              id="heroViewMenuBtn"
               size="lg"
               className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold px-8 py-4 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 border-0"
               onClick={() => scrollToSection("menu")}
@@ -1136,6 +1147,7 @@ export default function HomePage() {
               View Menu
             </Button>
             <Button
+              id="heroLeaveFeedbackBtn"
               size="lg"
               variant="outline"
               className="border-2 border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white font-semibold px-8 py-4 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 bg-white/80 backdrop-blur-sm"
@@ -1239,6 +1251,7 @@ export default function HomePage() {
                         <div className="flex items-center justify-center">
                           <div className="flex items-center bg-gray-800 rounded-lg p-1">
                             <Button
+                              id={`decreaseSpecialQuantity-${special.id}-Btn`}
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-white hover:bg-gray-700 rounded-md"
@@ -1250,6 +1263,7 @@ export default function HomePage() {
                               {cartQuantity}
                             </span>
                             <Button
+                              id={`increaseSpecialQuantity-${special.id}-Btn`}
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-white hover:bg-gray-700 rounded-md"
@@ -1261,6 +1275,7 @@ export default function HomePage() {
                         </div>
                       ) : (
                         <Button
+                          id={`addSpecialToCart-${special.id}-Btn`}
                           className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 hover:from-amber-700 hover:via-orange-700 hover:to-red-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
                           onClick={() => addToCart(special)}
                         >
@@ -1279,6 +1294,7 @@ export default function HomePage() {
               <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-amber-200 shadow-lg">
                 <p className="text-sm text-gray-700 mb-4 font-medium">🔥 Limited time offers - Order now!</p>
                 <Button
+                  id="viewFullMenuMobileBtn"
                   variant="outline"
                   size="sm"
                   onClick={() => scrollToSection("menu")}
@@ -1319,6 +1335,7 @@ export default function HomePage() {
                       Enable location to start ordering (must be within 50m of cafe)
                     </span>
                     <Button
+                      id="enableLocationBtn"
                       onClick={requestLocation}
                       disabled={checkingLocation}
                       size="sm"
@@ -1354,6 +1371,7 @@ export default function HomePage() {
                         ✅ Location verified - You can now place orders!
                       </span>
                       <Button
+                        id="refreshLocationBtn"
                         onClick={requestLocation}
                         size="sm"
                         variant="outline"
@@ -1375,6 +1393,7 @@ export default function HomePage() {
                         {locationError && <div className="text-xs mt-1">{locationError}</div>}
                       </div>
                       <Button
+                        id="retryLocationBtn"
                         onClick={requestLocation}
                         size="sm"
                         variant="outline"
@@ -1404,6 +1423,7 @@ export default function HomePage() {
           <div className="hidden md:flex flex-wrap justify-center gap-3 mb-12 animate-fade-in-delay">
             {categories.map((category) => (
               <Button
+                id={`categoryFilter-${category}-Btn`}
                 key={category}
                 variant={selectedCategory === category ? "default" : "outline"}
                 className={`transition-all duration-300 transform hover:scale-105 font-medium px-6 py-2 rounded-full shadow-lg hover:shadow-xl ${
@@ -1483,6 +1503,7 @@ export default function HomePage() {
                         <div className="flex items-center justify-center">
                           <div className="flex items-center bg-gray-800 rounded-lg p-1">
                             <Button
+                              id={`decreaseQuantity-${item.id}-Btn`}
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-white hover:bg-gray-700 rounded-md"
@@ -1498,6 +1519,7 @@ export default function HomePage() {
                               {cartQuantity}
                             </span>
                             <Button
+                              id={`increaseQuantity-${item.id}-Btn`}
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-white hover:bg-gray-700 rounded-md"
@@ -1513,6 +1535,7 @@ export default function HomePage() {
                         </div>
                       ) : (
                         <Button
+                          id={`addToCart-${item.id}-Btn`}
                           className={`w-full font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 ${
                             isAddToCartDisabled
                               ? "bg-gray-400 cursor-not-allowed hover:bg-gray-400 hover:transform-none hover:shadow-lg text-white"
@@ -1541,6 +1564,7 @@ export default function HomePage() {
                     </p>
                     {menuSearchTerm && (
                       <Button
+                        id="clearMenuSearchBtn"
                         variant="outline"
                         onClick={() => setMenuSearchTerm("")}
                         className="border-2 border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white font-semibold px-6 py-2 rounded-full transition-all duration-300"

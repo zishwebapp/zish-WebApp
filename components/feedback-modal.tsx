@@ -161,6 +161,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
+                  id={`starRating-${star}-Btn`}
                   type="button"
                   className={`p-1 transition-colors ${
                     star <= (hoveredRating || rating)
@@ -198,6 +199,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <Button
+              id="cancelFeedbackBtn"
               type="button"
               variant="outline"
               onClick={handleCancel}
@@ -207,6 +209,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               Cancel
             </Button>
             <Button
+              id="submitFeedbackBtn"
               type="submit"
               disabled={isSubmitting}
               className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"

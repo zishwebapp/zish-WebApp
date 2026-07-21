@@ -159,7 +159,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
               <Search className="h-6 w-6 text-amber-600" />
               My Orders
             </h2>
-            <Button variant="ghost" onClick={onClose} className="text-gray-500">
+            <Button id="closeMobileOrdersViewBtn" variant="ghost" onClick={onClose} className="text-gray-500">
               ✕
             </Button>
           </div>
@@ -169,6 +169,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
             {/* Search Type Toggle */}
             <div className="flex gap-2">
               <Button
+                id="searchByPhoneBtn"
                 variant={searchType === "phone" ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
@@ -182,6 +183,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                 Phone
               </Button>
               <Button
+                id="searchByNameBtn"
                 variant={searchType === "name" ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
@@ -208,6 +210,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                 />
               </div>
               <Button
+                id="mobileSearchOrdersBtn"
                 onClick={searchOrders}
                 disabled={isSearching || !searchTerm.trim()}
                 className="bg-amber-600 hover:bg-amber-700 px-6"
@@ -227,7 +230,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
             </div>
 
             {searchTerm && (
-              <Button variant="outline" size="sm" onClick={clearSearch} className="w-full bg-transparent">
+              <Button id="mobileClearOrdersSearchBtn" variant="outline" size="sm" onClick={clearSearch} className="w-full bg-transparent">
                 Clear Search
               </Button>
             )}
@@ -352,6 +355,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                               <Label className="text-sm font-medium mb-2 block">Order Status:</Label>
                               <div className="flex flex-wrap gap-2">
                                 <Button
+                                  id={`order-${order.id}-statusBtn`}
                                   variant="default"
                                   size="sm"
                                   className={`flex items-center space-x-1 pointer-events-none ${
@@ -379,6 +383,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                               <Label className="text-sm font-medium mb-2 block">Payment Status:</Label>
                               <div className="flex flex-wrap gap-2">
                                 <Button
+                                  id={`order-${order.id}-paymentStatusBtn`}
                                   variant="default"
                                   size="sm"
                                   className={`flex items-center space-x-1 pointer-events-none ${
@@ -412,6 +417,7 @@ export function MobileOrdersView({ isOpen, onClose }: MobileOrdersViewProps) {
                           {/* PDF Download Button - ADD THIS SECTION */}
                           <div className="mt-4 flex justify-end">
                             <Button
+                              id={`order-${order.id}-downloadPdfBtn`}
                               onClick={() => OrderPDFService.download(order)}
                               variant="outline"
                               size="sm"

@@ -119,6 +119,7 @@ export function SalesTab({ dateRangeParams, isReady, currentUser }: SalesTabProp
           />
         </div>
         <Button
+          id="openAddSaleBtn"
           onClick={() => {
             setForm(emptyForm)
             setShowAdd(true)
@@ -227,6 +228,7 @@ export function SalesTab({ dateRangeParams, isReady, currentUser }: SalesTabProp
             </div>
             <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
               <Button
+                id="cancelAddSaleBtn"
                 variant="outline"
                 onClick={() => {
                   setShowAdd(false)
@@ -236,10 +238,10 @@ export function SalesTab({ dateRangeParams, isReady, currentUser }: SalesTabProp
               >
                 Cancel
               </Button>
-              <Button variant="outline" disabled={saving} onClick={() => handleSave(true)} className="w-full sm:w-auto">
+              <Button id="saveAndAddNextSaleBtn" variant="outline" disabled={saving} onClick={() => handleSave(true)} className="w-full sm:w-auto">
                 Save & Add Next
               </Button>
-              <Button disabled={saving} onClick={() => handleSave(false)} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
+              <Button id="saveSaleBtn" disabled={saving} onClick={() => handleSave(false)} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
@@ -254,7 +256,7 @@ function DeleteButton({ sale, onConfirm }: { sale: SaleDto; onConfirm: (sale: Sa
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700" aria-label="Delete">
+        <Button id={`sale-${sale.id}-deleteBtn`} size="sm" variant="ghost" className="text-red-600 hover:text-red-700" aria-label="Delete">
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </AlertDialogTrigger>

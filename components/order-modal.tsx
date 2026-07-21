@@ -407,6 +407,7 @@ export function OrderModal({ isOpen, onClose, cart, clearCart, onSuccess }: Orde
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button
+              id="cancelOrderBtn"
               type="button"
               variant="outline"
               onClick={handleClose}
@@ -416,6 +417,7 @@ export function OrderModal({ isOpen, onClose, cart, clearCart, onSuccess }: Orde
               Cancel
             </Button>
             <Button
+              id="placeOrderBtn"
               type="submit"
               className="flex-1 h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium"
               disabled={isSubmitting || !!nameError || !!emailError || !!phoneError}

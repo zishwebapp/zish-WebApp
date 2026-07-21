@@ -33,6 +33,7 @@ export function OrderSuccessPopup({ open, onClose, orderId, totalAmount }: Order
       <div className="relative w-[90vw] max-w-md rounded-2xl bg-white shadow-2xl border border-amber-200 p-6 animate-in fade-in zoom-in-95" style={{ zIndex: 10000 }}>
         {/* Close */}
         <button
+          id="closeOrderSuccessPopupBtn"
           aria-label="Close"
           className="absolute right-3 top-3 p-2 rounded-md hover:bg-gray-100"
           onClick={onClose}
@@ -58,7 +59,7 @@ export function OrderSuccessPopup({ open, onClose, orderId, totalAmount }: Order
             </div>
           )}
 
-          <Button className="w-full bg-green-600 hover:bg-green-700" onClick={onClose}>
+          <Button id="orderSuccessGotItBtn" className="w-full bg-green-600 hover:bg-green-700" onClick={onClose}>
             Got it, thanks!
           </Button>
         </div>

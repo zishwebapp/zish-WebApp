@@ -87,10 +87,11 @@ export function CartDrawer({ cart, updateQuantity, removeFromCart, clearCart }: 
         </Sheet>
 
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={handleClearCart} className="text-white hover:bg-amber-700 p-2">
+          <Button id="clearCartBtn" variant="ghost" size="sm" onClick={handleClearCart} className="text-white hover:bg-amber-700 p-2">
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button
+            id="checkoutBarBtn"
             onClick={handleCheckout}
             className="bg-white text-amber-600 hover:bg-gray-100 font-medium px-6"
             type="button"
@@ -111,6 +112,7 @@ export function CartDrawer({ cart, updateQuantity, removeFromCart, clearCart }: 
               </div>
               {cart.length > 0 && (
                 <Button
+                  id="clearAllCartItemsBtn"
                   variant="ghost"
                   size="sm"
                   onClick={handleClearCart}
@@ -147,6 +149,7 @@ export function CartDrawer({ cart, updateQuantity, removeFromCart, clearCart }: 
                         )}
                         <div className="flex items-center space-x-2 mt-2">
                           <Button
+                            id={`decreaseQty-${item.cartId}-Btn`}
                             variant="outline"
                             size="sm"
                             onClick={() => updateQuantity(item.cartId, Math.max(0, item.quantity - 1))}
@@ -158,6 +161,7 @@ export function CartDrawer({ cart, updateQuantity, removeFromCart, clearCart }: 
                             {item.quantity}
                           </Badge>
                           <Button
+                            id={`increaseQty-${item.cartId}-Btn`}
                             variant="outline"
                             size="sm"
                             onClick={() => updateQuantity(item.cartId, item.quantity + 1)}
@@ -166,6 +170,7 @@ export function CartDrawer({ cart, updateQuantity, removeFromCart, clearCart }: 
                             <Plus className="h-3 w-3" />
                           </Button>
                           <Button
+                            id={`removeItem-${item.cartId}-Btn`}
                             variant="ghost"
                             size="sm"
                             onClick={() => removeFromCart(item.cartId)}
@@ -191,6 +196,7 @@ export function CartDrawer({ cart, updateQuantity, removeFromCart, clearCart }: 
                   </div>
 
                   <Button
+                    id="proceedToCheckoutBtn"
                     onClick={handleCheckout}
                     className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                     size="lg"

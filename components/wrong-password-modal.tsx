@@ -27,7 +27,7 @@ export function WrongPasswordModal({ open, onClose }: WrongPasswordModalProps) {
             className="w-full h-auto max-h-[50vh] object-contain rounded-lg mx-auto"
           />
           <p className="text-center text-sm text-gray-600">Please check your credentials and try again.</p>
-          <Button onClick={onClose} className="w-full bg-amber-600 hover:bg-amber-700">
+          <Button id="closeWrongPasswordModalBtn" onClick={onClose} className="w-full bg-amber-600 hover:bg-amber-700">
             Close
           </Button>
         </div>

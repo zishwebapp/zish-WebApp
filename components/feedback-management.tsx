@@ -198,9 +198,10 @@ export function FeedbackManagement({ userType }: FeedbackManagementProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {error}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              id="retryLoadFeedbackBtn"
+              variant="outline"
+              size="sm"
               onClick={refreshData}
               className="ml-2"
             >
@@ -220,11 +221,11 @@ export function FeedbackManagement({ userType }: FeedbackManagementProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={refreshData} variant="outline">
+          <Button id="refreshFeedbackBtn" onClick={refreshData} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
-          <Button onClick={exportFeedbackToCSV} variant="outline">
+          <Button id="exportFeedbackCsvBtn" onClick={exportFeedbackToCSV} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
@@ -385,6 +386,7 @@ export function FeedbackManagement({ userType }: FeedbackManagementProps) {
                     </TableCell>
                     <TableCell>
                       <Button
+                        id={`viewFeedback-${feedback.id}-Btn`}
                         variant="outline"
                         size="sm"
                         onClick={() => viewFeedbackDetails(feedback)}
@@ -409,6 +411,7 @@ export function FeedbackManagement({ userType }: FeedbackManagementProps) {
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-semibold">Feedback Details</h3>
                 <Button
+                  id="closeFeedbackDetailModalBtn"
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDetailModal(false)}

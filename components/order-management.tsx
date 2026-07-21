@@ -643,9 +643,10 @@ export function OrderManagement({ userType }: OrderManagementProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {error}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              id="retryLoadOrdersBtn"
+              variant="outline"
+              size="sm"
               onClick={() => loadOrders(currentPage)}
               className="ml-2"
             >
@@ -746,6 +747,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
           </div>
           <div className="flex flex-wrap gap-2 pt-2">
             <Button
+              id="clearFiltersBtn"
               variant="outline"
               onClick={() => {
                 setSearchTerm("")
@@ -772,11 +774,11 @@ export function OrderManagement({ userType }: OrderManagementProps) {
             <CardTitle>Orders Management</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => setShowNewOrderDialog(true)} size="sm" className="bg-orange-600 hover:bg-orange-700">
+            <Button id="openNewOrderDialogBtn" onClick={() => setShowNewOrderDialog(true)} size="sm" className="bg-orange-600 hover:bg-orange-700">
               <Plus className="h-4 w-4 mr-2" />
               New Order
             </Button>
-            <Button onClick={() => loadOrders(currentPage)} variant="outline" size="sm">
+            <Button id="refreshOrdersBtn" onClick={() => loadOrders(currentPage)} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -848,6 +850,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                       {item.id && (
                                         <div className="flex items-center border rounded-md">
                                           <button
+                                            id={`decreaseItemQty-${item.id}-Btn`}
                                             type="button"
                                             className="p-1 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-transparent"
                                             disabled={isItemUpdating}
@@ -857,6 +860,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                           </button>
                                           <span className="px-2 text-xs w-6 text-center">{item.quantity}</span>
                                           <button
+                                            id={`increaseItemQty-${item.id}-Btn`}
                                             type="button"
                                             className="p-1 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-transparent"
                                             disabled={isItemUpdating}
@@ -869,6 +873,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                       <span className="font-medium">₹{item.subtotal}</span>
                                       {canToggleItem ? (
                                         <Button
+                                          id={`toggleItemDelivered-${item.id}-Btn`}
                                           variant={isDelivered ? "default" : "outline"}
                                           size="sm"
                                           className={isDelivered ? "bg-green-600 hover:bg-green-700 h-7 px-2 text-xs" : "h-7 px-2 text-xs"}
@@ -896,6 +901,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                       )}
                                       {item.id && (
                                         <Button
+                                          id={`removeOrderItem-${item.id}-Btn`}
                                           variant="ghost"
                                           size="sm"
                                           className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -929,6 +935,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                   >
                                     <PopoverTrigger asChild>
                                       <Button
+                                        id={`selectMenuItemToAdd-${order.id}-Btn`}
                                         variant="outline"
                                         role="combobox"
                                         className="flex-1 justify-between font-normal"
@@ -967,6 +974,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                   </Popover>
                                   <div className="flex items-center border rounded-md self-start">
                                     <button
+                                      id={`decreaseAddItemQty-${order.id}-Btn`}
                                       type="button"
                                       className="p-2 hover:bg-gray-200"
                                       onClick={() => setAddItemQuantity(q => Math.max(1, q - 1))}
@@ -975,6 +983,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                     </button>
                                     <span className="px-3 text-sm w-8 text-center">{addItemQuantity}</span>
                                     <button
+                                      id={`increaseAddItemQty-${order.id}-Btn`}
                                       type="button"
                                       className="p-2 hover:bg-gray-200"
                                       onClick={() => setAddItemQuantity(q => q + 1)}
@@ -985,6 +994,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                 </div>
                                 <div className="flex gap-2">
                                   <Button
+                                    id={`confirmAddItem-${order.id}-Btn`}
                                     size="sm"
                                     disabled={!addItemMenuId || addingItem}
                                     onClick={() => handleAddItem(order.id)}
@@ -993,6 +1003,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                     Add
                                   </Button>
                                   <Button
+                                    id={`cancelAddItem-${order.id}-Btn`}
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
@@ -1007,7 +1018,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                 </div>
                               </div>
                             ) : (
-                              <Button variant="outline" size="sm" onClick={() => setAddItemOrderId(order.id)}>
+                              <Button id={`showAddItem-${order.id}-Btn`} variant="outline" size="sm" onClick={() => setAddItemOrderId(order.id)}>
                                 <Plus className="h-3 w-3 mr-1" />
                                 Add Item
                               </Button>
@@ -1038,6 +1049,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                 return (
                                   <Button
                                     key={status}
+                                    id={`orderStatus-${order.id}-${status}-Btn`}
                                     variant={isSelected ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => handleStatusUpdate(order.id, status)}
@@ -1077,6 +1089,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                                   <>
                                     {/* Unpaid */}
                                     <Button
+                                      id={`paymentUnpaid-${order.id}-Btn`}
                                       variant={order.paymentStatus === 'unpaid' ? 'default' : 'outline'}
                                       size="sm"
                                       onClick={() => handlePaymentUpdate(order.id, 'unpaid')}
@@ -1093,6 +1106,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
 
                                     {/* Paid Cash */}
                                     <Button
+                                      id={`paymentPaidCash-${order.id}-Btn`}
                                       variant={isPaid && isCash ? 'default' : 'outline'}
                                       size="sm"
                                       onClick={() => handlePaymentUpdate(order.id, 'paid_cash')}
@@ -1111,6 +1125,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
 
                                     {/* Paid UPI */}
                                     <Button
+                                      id={`paymentPaidUpi-${order.id}-Btn`}
                                       variant={isPaid && isUpi ? 'default' : 'outline'}
                                       size="sm"
                                       onClick={() => handlePaymentUpdate(order.id, 'paid_upi')}
@@ -1145,6 +1160,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                           
                           <div className={`flex gap-2 ${(order as any).isOrphaned ? 'ml-auto' : 'ml-auto'}`}>
                             <Button
+                              id={`downloadOrderPdf-${order.id}-Btn`}
                               onClick={() => OrderPDFService.download(order)}
                               variant="outline"
                               size="sm"
@@ -1153,10 +1169,11 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                               <Download className="h-4 w-4" />
                               Download PDF
                             </Button>
-                            
+
                             {/* Delete Button - Superadmin Only */}
                             {userType === "superadmin" && (
                               <Button
+                                id={`deleteOrder-${order.id}-Btn`}
                                 onClick={() => handleDeleteOrder(String(order.id))}
                                 variant="outline"
                                 size="sm"
@@ -1183,6 +1200,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-4 mt-6 pb-4">
                   <Button
+                    id="prevPageBtn"
                     variant="outline"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1 || loading}
@@ -1200,6 +1218,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                   </div>
 
                   <Button
+                    id="nextPageBtn"
                     variant="outline"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages || loading}
@@ -1225,6 +1244,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
               </p>
               {(searchTerm || statusFilter !== "all" || paymentFilter !== "all") && (
                 <Button
+                  id="clearFiltersEmptyStateBtn"
                   variant="outline"
                   onClick={() => {
                     setSearchTerm("")
@@ -1251,6 +1271,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-semibold">Order Details #{selectedOrder.id}</h3>
                 <Button
+                  id="closeOrderDetailModalBtn"
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowOrderModal(false)}
@@ -1306,6 +1327,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                             <p className="font-medium">₹{item.subtotal}</p>
                             {canToggleItem ? (
                               <Button
+                                id={`modalToggleItemDelivered-${item.id}-Btn`}
                                 variant={isDelivered ? "default" : "outline"}
                                 size="sm"
                                 className={isDelivered ? "bg-green-600 hover:bg-green-700 h-7 px-2 text-xs" : "h-7 px-2 text-xs"}
@@ -1416,7 +1438,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
               <div className="flex flex-col sm:flex-row gap-2">
                 <Popover open={newOrderPickerOpen} onOpenChange={setNewOrderPickerOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="flex-1 justify-between font-normal">
+                    <Button id="selectNewOrderMenuItemBtn" variant="outline" role="combobox" className="flex-1 justify-between font-normal">
                       {newOrderSelectedMenuId
                         ? (() => {
                             const m = menuItems.find(m => String(m.id) === newOrderSelectedMenuId)
@@ -1451,6 +1473,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                 </Popover>
                 <div className="flex items-center border rounded-md self-start">
                   <button
+                    id="decreaseNewOrderSelectedQtyBtn"
                     type="button"
                     className="p-2 hover:bg-gray-200"
                     onClick={() => setNewOrderSelectedQty(q => Math.max(1, q - 1))}
@@ -1459,6 +1482,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                   </button>
                   <span className="px-3 text-sm w-8 text-center">{newOrderSelectedQty}</span>
                   <button
+                    id="increaseNewOrderSelectedQtyBtn"
                     type="button"
                     className="p-2 hover:bg-gray-200"
                     onClick={() => setNewOrderSelectedQty(q => q + 1)}
@@ -1466,7 +1490,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                     <Plus className="h-3 w-3" />
                   </button>
                 </div>
-                <Button size="sm" disabled={!newOrderSelectedMenuId} onClick={handleAddNewOrderItem}>
+                <Button id="addNewOrderItemBtn" size="sm" disabled={!newOrderSelectedMenuId} onClick={handleAddNewOrderItem}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add
                 </Button>
@@ -1480,6 +1504,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                       <div className="flex items-center gap-2">
                         <div className="flex items-center border rounded-md">
                           <button
+                            id={`decreaseNewOrderItemQty-${item.menuItemId}-Btn`}
                             type="button"
                             className="p-1 hover:bg-gray-200"
                             onClick={() => handleNewOrderItemQtyChange(item.menuItemId, -1)}
@@ -1488,6 +1513,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                           </button>
                           <span className="px-2 text-xs w-6 text-center">{item.quantity}</span>
                           <button
+                            id={`increaseNewOrderItemQty-${item.menuItemId}-Btn`}
                             type="button"
                             className="p-1 hover:bg-gray-200"
                             onClick={() => handleNewOrderItemQtyChange(item.menuItemId, 1)}
@@ -1497,6 +1523,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                         </div>
                         <span className="font-medium w-14 text-right">₹{item.price * item.quantity}</span>
                         <Button
+                          id={`removeNewOrderItem-${item.menuItemId}-Btn`}
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -1528,6 +1555,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
 
             <div className="flex gap-3 pt-2">
               <Button
+                id="cancelNewOrderDialogBtn"
                 variant="outline"
                 className="flex-1"
                 disabled={placingNewOrder}
@@ -1539,6 +1567,7 @@ export function OrderManagement({ userType }: OrderManagementProps) {
                 Cancel
               </Button>
               <Button
+                id="placeNewOrderBtn"
                 className="flex-1 bg-orange-600 hover:bg-orange-700"
                 disabled={placingNewOrder || !newOrderCustomerName.trim() || newOrderItems.length === 0}
                 onClick={handlePlaceNewOrder}

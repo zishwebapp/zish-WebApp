@@ -123,6 +123,7 @@ export function MobileMenuSearch({
         {categories.map((category) => (
           <Button
             key={category}
+            id={`mobileCategory-${category}-Btn`}
             variant={selectedCategory === category ? "default" : "outline"}
             size="sm"
             className={`transition-all duration-300 font-medium px-4 py-2 rounded-full ${
@@ -184,6 +185,7 @@ export function MobileMenuSearch({
                     <div className="flex items-center justify-center">
                       <div className="flex items-center bg-gray-800 rounded-lg p-1">
                         <Button
+                          id={`mobileMenuItem-${item.id}-decreaseQtyBtn`}
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-white hover:bg-gray-700 rounded-md"
@@ -199,6 +201,7 @@ export function MobileMenuSearch({
                           {quantity}
                         </span>
                         <Button
+                          id={`mobileMenuItem-${item.id}-increaseQtyBtn`}
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-white hover:bg-gray-700 rounded-md"
@@ -214,6 +217,7 @@ export function MobileMenuSearch({
                     </div>
                   ) : (
                     <Button
+                      id={`mobileMenuItem-${item.id}-addToCartBtn`}
                       size="sm"
                       className={`w-full font-semibold py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 border-0 ${
                         isAddToCartDisabled
@@ -248,6 +252,7 @@ export function MobileMenuSearch({
               </p>
               {searchTerm && (
                 <Button
+                  id="mobileClearSearchBtn"
                   variant="outline"
                   size="sm"
                   onClick={() => setSearchTerm("")}

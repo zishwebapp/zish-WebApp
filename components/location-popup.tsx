@@ -45,6 +45,7 @@ export function LocationPopup({ isOpen, onClose, onEnableLocation }: LocationPop
           
           {/* OK Button */}
           <Button
+            id="enableLocationOkBtn"
             onClick={handleOkClick}
             className="w-full bg-gray-700 hover:bg-gray-800 text-white font-semibold py-4 rounded-lg transition-colors duration-200"
             size="lg"

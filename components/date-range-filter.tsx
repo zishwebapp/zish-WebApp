@@ -33,6 +33,7 @@ export function DateRangeFilterBar({
         {PRESETS.map((preset) => (
           <Button
             key={preset.value}
+            id={`dateRangePreset-${preset.value}-Btn`}
             type="button"
             size="sm"
             variant={range === preset.value ? "default" : "outline"}

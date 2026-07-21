@@ -45,7 +45,7 @@ export function CustomerOrderTracking() {
               onChange={(e) => setPhone(e.target.value)}
               className="flex-1"
             />
-            <Button onClick={searchOrders} disabled={loading}>
+            <Button id="searchOrdersBtn" onClick={searchOrders} disabled={loading}>
               <Search className="h-4 w-4" />
             </Button>
           </div>

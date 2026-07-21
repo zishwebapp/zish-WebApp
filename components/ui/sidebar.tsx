@@ -268,6 +268,7 @@ const SidebarTrigger = React.forwardRef<
   return (
     <Button
       ref={ref}
+      id="sidebarToggleBtn"
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
@@ -294,6 +295,7 @@ const SidebarRail = React.forwardRef<
   return (
     <button
       ref={ref}
+      id="sidebarRailToggleBtn"
       data-sidebar="rail"
       aria-label="Toggle Sidebar"
       tabIndex={-1}

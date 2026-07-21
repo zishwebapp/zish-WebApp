@@ -194,20 +194,20 @@ export function InventoryEntriesTab({ dateRangeParams, isReady, currentUser }: I
     return (
       <>
         {entry.status === "pending" && (
-          <Button size="sm" variant="outline" onClick={() => handleMarkPurchased(entry)}>
+          <Button id={`inventoryEntry-${entry.id}-markPurchasedBtn`} size="sm" variant="outline" onClick={() => handleMarkPurchased(entry)}>
             <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1" />
             <span className="hidden sm:inline">Mark Purchased</span>
           </Button>
         )}
-        <Button size="sm" variant="ghost" onClick={() => openEdit(entry)} aria-label="Edit">
+        <Button id={`inventoryEntry-${entry.id}-editBtn`} size="sm" variant="ghost" onClick={() => openEdit(entry)} aria-label="Edit">
           <Pencil className="h-3.5 w-3.5" />
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => handleDuplicate(entry)} aria-label="Duplicate">
+        <Button id={`inventoryEntry-${entry.id}-duplicateBtn`} size="sm" variant="ghost" onClick={() => handleDuplicate(entry)} aria-label="Duplicate">
           <Copy className="h-3.5 w-3.5" />
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700" aria-label="Delete">
+            <Button id={`inventoryEntry-${entry.id}-deleteBtn`} size="sm" variant="ghost" className="text-red-600 hover:text-red-700" aria-label="Delete">
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </AlertDialogTrigger>
@@ -242,7 +242,7 @@ export function InventoryEntriesTab({ dateRangeParams, isReady, currentUser }: I
             className="pl-9"
           />
         </div>
-        <Button onClick={openAdd} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
+        <Button id="openAddInventoryBtn" onClick={openAdd} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
           <Plus className="h-4 w-4 mr-2" /> Add Inventory
         </Button>
       </div>
@@ -386,6 +386,7 @@ export function InventoryEntriesTab({ dateRangeParams, isReady, currentUser }: I
             </div>
             <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
               <Button
+                id="cancelInventoryEntryBtn"
                 variant="outline"
                 onClick={() => {
                   setShowAdd(false)
@@ -396,11 +397,11 @@ export function InventoryEntriesTab({ dateRangeParams, isReady, currentUser }: I
                 Cancel
               </Button>
               {!editingEntry && (
-                <Button variant="outline" disabled={saving} onClick={() => handleSave(true)} className="w-full sm:w-auto">
+                <Button id="saveAndAddNextInventoryBtn" variant="outline" disabled={saving} onClick={() => handleSave(true)} className="w-full sm:w-auto">
                   Save & Add Next
                 </Button>
               )}
-              <Button disabled={saving} onClick={() => handleSave(false)} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
+              <Button id="saveInventoryEntryBtn" disabled={saving} onClick={() => handleSave(false)} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
