@@ -232,7 +232,10 @@ export function OrderManagement({ userType }: OrderManagementProps) {
     try {
       setUpdatingItems(prev => new Set(prev).add(itemId))
 
-      // Update local state immediately for better UX
+      // Update local state immediately for better UX. Note: position within
+      // the list isn't re-sorted until the next reload (page/filter change),
+      // even though this may change which delivery-status group the order
+      // belongs to.
       setOrders(prevOrders => prevOrders.map(order =>
         order.id === orderId
           ? { ...order, items: order.items.map(item => item.id === itemId ? { ...item, itemStatus: newStatus } : item) }
@@ -244,11 +247,18 @@ export function OrderManagement({ userType }: OrderManagementProps) {
           : prev
       )
 
-      await updateOrderItemStatus(orderId, itemId, { itemStatus: newStatus })
+      const result = await updateOrderItemStatus(orderId, itemId, { itemStatus: newStatus })
 
-      // Refresh from server to ensure consistency (also picks up the
-      // automatic "ready" bump if this was the last item delivered)
-      await loadOrders(currentPage)
+      // Backend auto-bumps order status to "ready" once every item is
+      // delivered; mirror that locally instead of refetching the whole list.
+      if (result.orderStatusBumpedToReady) {
+        setOrders(prevOrders => prevOrders.map(order =>
+          order.id === orderId ? { ...order, orderStatus: 'ready' } : order
+        ))
+        setSelectedOrder(prev =>
+          prev && prev.id === orderId ? { ...prev, orderStatus: 'ready' } : prev
+        )
+      }
 
       toast({
         title: "Item Updated",
@@ -768,12 +778,12 @@ export function OrderManagement({ userType }: OrderManagementProps) {
 
       {/* Orders Management */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
             <CardTitle>Orders Management</CardTitle>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button id="openNewOrderDialogBtn" onClick={() => setShowNewOrderDialog(true)} size="sm" className="bg-orange-600 hover:bg-orange-700">
               <Plus className="h-4 w-4 mr-2" />
               New Order

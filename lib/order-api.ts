@@ -221,17 +221,30 @@ export async function fetchAllOrders(params?: {
       )
     }
 
+    // Surface orders with at least one undelivered item first (page 1 onward),
+    // pushing fully-delivered orders to later pages. Orders with no items are
+    // treated as "not delivered" since [].some(...) would otherwise be false.
+    const isFullyDelivered = (o: Order) =>
+      o.items.length > 0 && o.items.every(item => item.itemStatus === 'delivered')
+
+    const byDateDesc = (a: Order, b: Order) =>
+      new Date(b.orderDate ?? b.createdAt).getTime() - new Date(a.orderDate ?? a.createdAt).getTime()
+
+    const notFullyDelivered = orders.filter(o => !isFullyDelivered(o)).sort(byDateDesc)
+    const fullyDelivered = orders.filter(isFullyDelivered).sort(byDateDesc)
+    const combined = [...notFullyDelivered, ...fullyDelivered]
+
     // Client-side pagination
     const page = params?.page || 1
     const limit = params?.limit || 10
     const start = (page - 1) * limit
     const end = start + limit
-    const paginatedOrders = orders.slice(start, end)
+    const paginatedOrders = combined.slice(start, end)
 
     return {
       orders: paginatedOrders,
-      totalCount: orders.length,
-      totalPages: Math.ceil(orders.length / limit),
+      totalCount: combined.length,
+      totalPages: Math.ceil(combined.length / limit),
       currentPage: page
     }
   } catch (error) {
@@ -306,7 +319,7 @@ export async function updateOrderItemStatus(
   orderId: string,
   itemId: string,
   itemUpdate: OrderItemStatusUpdate
-): Promise<void> {
+): Promise<{ orderStatusBumpedToReady: boolean }> {
   try {
     const response = await fetch(`${API_BASE_URL}/orders/${orderId}/items/${itemId}/status`, {
       method: 'PUT',
@@ -328,6 +341,8 @@ export async function updateOrderItemStatus(
     if (!apiResponse.success) {
       throw new Error(apiResponse.message || 'Failed to update item status')
     }
+
+    return { orderStatusBumpedToReady: !!apiResponse.data?.orderStatusBumpedToReady }
   } catch (error) {
     console.error('Error updating order item status:', error)
     throw error
