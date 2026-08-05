@@ -19,11 +19,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Trash2, Search } from "lucide-react"
+import { Plus, Trash2, Search, TrendingUp } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { fetchSales, createSale, deleteSale, type SaleDto } from "@/lib/sales-api"
 import type { DateRangeParams } from "@/lib/inventory-api"
 import { dashboardSummaryKey } from "@/lib/dashboard-api"
+import { fetchDashboardStats } from "@/lib/order-api"
 
 interface SalesTabProps {
   dateRangeParams: DateRangeParams
@@ -48,6 +49,14 @@ export function SalesTab({ dateRangeParams, isReady, currentUser }: SalesTabProp
     ? (["sales", dateRangeParams.range, dateRangeParams.start, dateRangeParams.end] as const)
     : null
   const { data: sales, isLoading } = useSWR(listKey, () => fetchSales(dateRangeParams))
+
+  const fastMovingKey = isReady
+    ? (["dashboard-stats-fast-moving", dateRangeParams.range, dateRangeParams.start, dateRangeParams.end] as const)
+    : null
+  const { data: dashboardStats, isLoading: fastMovingLoading } = useSWR(fastMovingKey, () =>
+    fetchDashboardStats(dateRangeParams)
+  )
+  const topFastMoving = (dashboardStats?.fast_moving_items || []).slice(0, 10)
 
   const filtered = (sales || []).filter(
     (s) => !search || s.notes.toLowerCase().includes(search.toLowerCase())
@@ -129,6 +138,59 @@ export function SalesTab({ dateRangeParams, isReady, currentUser }: SalesTabProp
           <Plus className="h-4 w-4 mr-2" /> Add Sale
         </Button>
       </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="p-4 border-b flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-purple-600" />
+            <h3 className="font-semibold">Top 10 Fast Moving Products</h3>
+          </div>
+          {fastMovingLoading ? (
+            <p className="text-center text-gray-500 py-8">Loading...</p>
+          ) : topFastMoving.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No product sales data yet.</p>
+          ) : (
+            <>
+              {/* Mobile: stacked card list */}
+              <div className="sm:hidden divide-y">
+                {topFastMoving.map((item, idx) => (
+                  <div key={item.item_name} className="p-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="flex-shrink-0 h-6 w-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <p className="font-medium truncate">{item.item_name}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-purple-600 flex-shrink-0">{item.total_quantity} sold</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-500">
+                      <th className="p-3 font-medium w-12">#</th>
+                      <th className="p-3 font-medium">Product</th>
+                      <th className="p-3 font-medium">Units Sold</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topFastMoving.map((item, idx) => (
+                      <tr key={item.item_name} className="border-b last:border-0">
+                        <td className="p-3 text-gray-500">{idx + 1}</td>
+                        <td className="p-3 font-medium">{item.item_name}</td>
+                        <td className="p-3 text-purple-600 font-semibold">{item.total_quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
